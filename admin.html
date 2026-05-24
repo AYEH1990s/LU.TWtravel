@@ -512,7 +512,10 @@ function drawCanvas(idx){
   const canvas=document.getElementById('canvas-'+idx);
   const img=loadedImgs[idx];
   if(!canvas||!img)return;
-  const SW=canvas.parentElement.offsetWidth||560;
+  // Always use the CSS display width (offsetWidth of the stage), not canvas.width
+  const stage=document.getElementById('stage-'+idx);
+  const SW=stage?stage.offsetWidth:560;
+  if(!SW)return;
   const imgAR=img.naturalWidth/img.naturalHeight;
   const cropH=SW/CROP_AR;
   const imgH=SW/imgAR;
@@ -555,12 +558,38 @@ function bindDrag(idx){
   const canvas=document.getElementById('canvas-'+idx);
   if(!canvas||canvas._dragBound)return;
   canvas._dragBound=true;
-  let dragging=false,lx=0,ly=0;
-  canvas.addEventListener('mousedown',e=>{e.preventDefault();dragging=true;lx=e.clientX;ly=e.clientY;canvas.style.cursor='grabbing';});
-  window.addEventListener('mousemove',e=>{if(!dragging)return;applyDrag(idx,e.clientX-lx,e.clientY-ly);lx=e.clientX;ly=e.clientY;});
-  window.addEventListener('mouseup',()=>{if(dragging){dragging=false;canvas.style.cursor='grab';}});
-  canvas.addEventListener('touchstart',e=>{e.preventDefault();dragging=true;lx=e.touches[0].clientX;ly=e.touches[0].clientY;},{passive:false});
-  canvas.addEventListener('touchmove',e=>{e.preventDefault();if(!dragging)return;applyDrag(idx,e.touches[0].clientX-lx,e.touches[0].clientY-ly);lx=e.touches[0].clientX;ly=e.touches[0].clientY;},{passive:false});
+  let dragging=false,lx=0,ly=0,rafPending=false;
+
+  function schedDraw(){
+    if(rafPending)return;
+    rafPending=true;
+    requestAnimationFrame(()=>{drawCanvas(idx);rafPending=false;});
+  }
+
+  canvas.addEventListener('mousedown',e=>{
+    e.preventDefault();dragging=true;
+    lx=e.clientX;ly=e.clientY;
+    canvas.style.cursor='grabbing';
+  });
+  window.addEventListener('mousemove',e=>{
+    if(!dragging)return;
+    applyDrag(idx,e.clientX-lx,e.clientY-ly);
+    lx=e.clientX;ly=e.clientY;
+    schedDraw();
+  });
+  window.addEventListener('mouseup',()=>{
+    if(dragging){dragging=false;canvas.style.cursor='grab';}
+  });
+  canvas.addEventListener('touchstart',e=>{
+    e.preventDefault();dragging=true;
+    lx=e.touches[0].clientX;ly=e.touches[0].clientY;
+  },{passive:false});
+  canvas.addEventListener('touchmove',e=>{
+    e.preventDefault();if(!dragging)return;
+    applyDrag(idx,e.touches[0].clientX-lx,e.touches[0].clientY-ly);
+    lx=e.touches[0].clientX;ly=e.touches[0].clientY;
+    schedDraw();
+  },{passive:false});
   canvas.addEventListener('touchend',()=>{dragging=false;canvas.style.cursor='grab';});
 }
 
@@ -569,21 +598,33 @@ function applyDrag(idx,dx,dy){
   const m=currentPhotoMeta[idx];
   const img=loadedImgs[idx];
   if(!img)return;
-  const canvas=document.getElementById('canvas-'+idx);
-  const SW=canvas?canvas.width:560;
+  // Use stage offsetWidth (CSS pixels) — consistent with drawCanvas
+  const stage=document.getElementById('stage-'+idx);
+  const SW=stage?stage.offsetWidth:560;
   const zoom=parseFloat(m.zoom)||1;
   const imgAR=img.naturalWidth/img.naturalHeight;
-  const dw=SW*zoom, dh=(SW/imgAR)*zoom;
+  const dw=SW*zoom;
+  const dh=(SW/imgAR)*zoom;
   const cropH=SW/CROP_AR;
   const SH=Math.max(cropH,SW/imgAR);
-  // 1px drag moves anchor by 1/(dw-SW) in X and 1/(dh-SH) in Y (as fraction of 100)
-  const overX=Math.abs(dw-SW);
-  const overY=Math.abs(dh-SH);
-  const senX=overX>1?(100/overX):0;
-  const senY=overY>1?(100/overY):0;
-  m.ox=Math.max(0,Math.min(100,(m.ox||50)-dx*senX));
-  m.oy=Math.max(0,Math.min(100,(m.oy||50)-dy*senY));
-  drawCanvas(idx);
+  // Sensitivity: moving dx pixels shifts ox by dx/(SW-dw)*100
+  // When zoom<1: dw<SW, so image has "room" to move right (positive dx increases ox)
+  // When zoom>1: dw>SW, so image extends beyond stage (positive dx increases ox = shifts image left, showing more right)
+  // Both cases: senX = 100 / |dw - SW| but direction:
+  // dx>0 (move right) should increase ox when zoom>1 (show more of right side)
+  const overX=dw-SW; // positive when zoomed in, negative when zoomed out
+  const overY=dh-SH;
+  const senX=Math.abs(overX)>2?(100/Math.abs(overX)):0;
+  const senY=Math.abs(overY)>2?(100/Math.abs(overY)):0;
+  // When overX>0 (zoom>1): drag right (dx>0) → show right side → increase ox → -dx*senX is wrong
+  // Actually: drag right moves image right → image shifts right → we see more of left side → ox decreases
+  // So: m.ox -= dx * senX (when zoom>1, overX>0)
+  // When overX<0 (zoom<1): image smaller than stage, drag right moves anchor right → ox increases
+  // So direction flips: m.ox += dx * senX  → m.ox -= dx * (senX * sign(overX))
+  const dirX=overX>=0?1:-1;
+  const dirY=overY>=0?1:-1;
+  m.ox=Math.max(0,Math.min(100,(m.ox||50)-dx*senX*dirX));
+  m.oy=Math.max(0,Math.min(100,(m.oy||50)-dy*senY*dirY));
 }
 
 // ── SAVE ──
