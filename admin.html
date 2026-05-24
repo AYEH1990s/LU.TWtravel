@@ -426,9 +426,12 @@ window.editPlace=function(id){
   document.getElementById('fEmoji').value=p.emoji||'';
   document.getElementById('fMapUrl').value=p.mapUrl||'';
   currentPhotos=[...(p.photos||[])];
-  currentPhotoMeta=[...(p.photoMeta||[])];
-  // ensure meta length matches photos
-  while(currentPhotoMeta.length<currentPhotos.length) currentPhotoMeta.push({zoom:1,x:50,y:50});
+  currentPhotoMeta=(p.photoMeta||[]).map(m=>({
+    zoom:parseFloat(m.zoom)||1,
+    ox:m.ox!=null?parseFloat(m.ox):50,
+    oy:m.oy!=null?parseFloat(m.oy):50,
+  }));
+  while(currentPhotoMeta.length<currentPhotos.length) currentPhotoMeta.push({zoom:1,ox:50,oy:50});
   renderPhotoPreviews();
   document.getElementById('modalBackdrop').classList.add('open');
 };
@@ -449,7 +452,7 @@ window.handleFiles=async function(files){
       const compressed=await compressImage(toUpload[i],1200,0.82);
       const url=await uploadToCloudinary(compressed);
       currentPhotos.push(url);
-      currentPhotoMeta.push({zoom:1,x:50,y:50});
+      currentPhotoMeta.push({zoom:1,ox:50,oy:50});
       renderPhotoPreviews();
     }catch(e){showToast('Upload failed: '+e.message,'error');}
   }
@@ -489,16 +492,12 @@ window.removePhoto=function(idx){
 function renderPhotoPreviews(){
   const wrap=document.getElementById('photosPreview');
   wrap.innerHTML=currentPhotos.map((url,i)=>{
-    const m=currentPhotoMeta[i]||{zoom:1,tx:0,ty:0};
+    const m=currentPhotoMeta[i]||{zoom:1,ox:50,oy:50};
     const zoom=parseFloat(m.zoom)||1;
     return `<div class="preview-item">
       <div class="preview-num">Photo ${i+1} of ${currentPhotos.length}</div>
-      <div class="preview-stage" id="stage-${i}"
-        onmousedown="vpDragStart(event,${i})"
-        ontouchstart="vpTouchStart(event,${i})">
-        <img id="pimg-${i}" src="${esc(url)}" alt="" draggable="false"
-          onload="initStage(${i})"/>
-        <div class="crop-overlay" id="crop-${i}"></div>
+      <div class="preview-stage" id="stage-${i}">
+        <canvas id="canvas-${i}" style="display:block;width:100%;cursor:grab"></canvas>
         <div class="crop-hint">Drag to reposition · Bright area = visible on site</div>
       </div>
       <div class="preview-controls">
@@ -517,141 +516,139 @@ function renderPhotoPreviews(){
     </div>`;
   }).join('');
   document.getElementById('uploadArea').style.display=currentPhotos.length>=5?'none':'block';
-  // init stages for already-loaded images
-  currentPhotos.forEach((_,i)=>{
-    const img=document.getElementById('pimg-'+i);
-    if(img&&img.complete) initStage(i);
+
+  // load images and init canvases
+  currentPhotos.forEach((url,i)=>{
+    const img=new Image();
+    img.crossOrigin='anonymous';
+    img.onload=()=>{ editorImgs[i]=img; drawCanvas(i); bindCanvasDrag(i); };
+    img.src=url;
   });
 }
 
-// CROP STAGE: fit full image into stage, show 16:9 crop overlay
-const CROP_RATIO=16/9;
-const stageW=560; // approx modal width in px — recalculated from actual DOM
+// store loaded image elements
+const editorImgs={};
+const CROP_AR=16/9; // crop aspect ratio shown on site
 
-window.initStage=function(idx){
-  const img=document.getElementById('pimg-'+idx);
-  const stage=document.getElementById('stage-'+idx);
-  if(!img||!stage)return;
-  const natW=img.naturalWidth,natH=img.naturalHeight;
-  if(!natW||!natH)return;
+function getCanvasSize(idx){
+  const canvas=document.getElementById('canvas-'+idx);
+  if(!canvas)return{cw:560,ch:315};
+  const cw=canvas.parentElement.offsetWidth||560;
+  const img=editorImgs[idx];
+  if(!img)return{cw,ch:Math.round(cw/CROP_AR)};
+  // stage height: show full image height OR crop height, whichever is bigger
+  const imgAR=img.naturalWidth/img.naturalHeight;
+  const imgDisplayH=cw/imgAR;
+  const cropH=cw/CROP_AR;
+  const ch=Math.max(imgDisplayH,cropH,180);
+  return{cw,ch};
+}
 
-  const m=currentPhotoMeta[idx]||{zoom:1,tx:0,ty:0};
-  const stW=stage.offsetWidth||560;
+function drawCanvas(idx){
+  const canvas=document.getElementById('canvas-'+idx);
+  const img=editorImgs[idx];
+  if(!canvas||!img)return;
 
-  // Stage height = show full image at zoom=1 scaled to fit width
-  // but minimum = crop height so we always see the crop box fully
-  const scaledH=stW*(natH/natW);
-  const cropH=stW/CROP_RATIO;
-  const stH=Math.max(scaledH,cropH,180);
-  stage.style.height=stH+'px';
+  const{cw,ch}=getCanvasSize(idx);
+  canvas.width=cw;
+  canvas.height=ch;
 
-  // store natural dims for positioning
-  stage.dataset.natW=natW;
-  stage.dataset.natH=natH;
-  stage.dataset.stW=stW;
-  stage.dataset.stH=stH;
-
-  applyImgTransform(idx);
-};
-
-function applyImgTransform(idx){
-  const img=document.getElementById('pimg-'+idx);
-  const stage=document.getElementById('stage-'+idx);
-  const crop=document.getElementById('crop-'+idx);
-  if(!img||!stage)return;
-
-  const m=currentPhotoMeta[idx]||{zoom:1,tx:0,ty:0};
+  const ctx=canvas.getContext('2d');
+  const m=currentPhotoMeta[idx]||{zoom:1,ox:50,oy:50};
   const zoom=Math.min(2.0,Math.max(0.5,parseFloat(m.zoom)||1));
-  const tx=parseFloat(m.tx)||0;
-  const ty=parseFloat(m.ty)||0;
+  const ox=parseFloat(m.ox)||50; // 0-100%
+  const oy=parseFloat(m.oy)||50;
 
-  const stW=parseFloat(stage.dataset.stW)||stage.offsetWidth||560;
-  const stH=parseFloat(stage.dataset.stH)||stage.offsetHeight||320;
-  const natW=parseFloat(stage.dataset.natW)||img.naturalWidth||1;
-  const natH=parseFloat(stage.dataset.natH)||img.naturalHeight||1;
+  // how large to draw the image (zoom=1 means fit full image in canvas width)
+  const baseW=cw;
+  const baseH=cw*(img.naturalHeight/img.naturalWidth);
+  const dw=baseW*zoom;
+  const dh=baseH*zoom;
 
-  // Scale image so its width = stW * zoom (fit width, then zoom)
-  const baseScale=stW/natW;
-  const finalScale=baseScale*zoom;
-  const dispW=natW*finalScale;
-  const dispH=natH*finalScale;
+  // translate ox/oy % into pixel offset
+  // ox=50 → image centred; ox=0 → image shifted right (showing left part); ox=100 → shifted left
+  const extraW=Math.max(0,dw-cw);
+  const extraH=Math.max(0,dh-ch);
+  const dx=(cw-dw)/2 + (0.5-ox/100)*extraW*2;
+  const dy=(ch-dh)/2 + (0.5-oy/100)*extraH*2;
 
-  // center image in stage, then apply translation
-  const baseX=(stW-dispW)/2+tx;
-  const baseY=(stH-dispH)/2+ty;
+  // draw dim overlay first
+  ctx.clearRect(0,0,cw,ch);
+  ctx.drawImage(img,dx,dy,dw,dh);
 
-  img.style.width=dispW+'px';
-  img.style.height=dispH+'px';
-  img.style.transform=`translate(${baseX}px,${baseY}px)`;
-  img.style.top='0';img.style.left='0';
+  // dim everything
+  ctx.fillStyle='rgba(0,0,0,0.45)';
+  ctx.fillRect(0,0,cw,ch);
 
-  // crop overlay: 16:9 centered in stage
-  const cropW=stW;
-  const cropH=stW/CROP_RATIO;
-  const cropTop=(stH-cropH)/2;
-  if(crop){
-    crop.style.left='0';
-    crop.style.top=cropTop+'px';
-    crop.style.width=cropW+'px';
-    crop.style.height=cropH+'px';
-  }
+  // crop rect (16:9 centred)
+  const cropH=cw/CROP_AR;
+  const cropY=(ch-cropH)/2;
+
+  // re-draw image clipped to crop rect (bright area)
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0,cropY,cw,cropH);
+  ctx.clip();
+  ctx.drawImage(img,dx,dy,dw,dh);
+  ctx.restore();
+
+  // crop border
+  ctx.strokeStyle='rgba(255,255,255,0.85)';
+  ctx.lineWidth=2;
+  ctx.strokeRect(1,cropY+1,cw-2,cropH-2);
 }
 
 // zoom slider
 window.updateZoom=function(idx,val){
   const zoom=Math.min(2.0,Math.max(0.5,parseFloat(val)));
-  if(!currentPhotoMeta[idx])currentPhotoMeta[idx]={zoom:1,tx:0,ty:0};
+  if(!currentPhotoMeta[idx])currentPhotoMeta[idx]={zoom:1,ox:50,oy:50};
   currentPhotoMeta[idx].zoom=zoom;
-  applyImgTransform(idx);
+  drawCanvas(idx);
   const lbl=document.getElementById('zlabel-'+idx);
   if(lbl)lbl.textContent=zoom.toFixed(1)+'x';
 };
 
-// drag to reposition
-let vpDragging={active:false,idx:-1,startX:0,startY:0,startTx:0,startTy:0};
+// drag to reposition on canvas
+function bindCanvasDrag(idx){
+  const canvas=document.getElementById('canvas-'+idx);
+  if(!canvas)return;
 
-window.vpDragStart=function(e,idx){
-  e.preventDefault();
-  const m=currentPhotoMeta[idx]||{tx:0,ty:0};
-  vpDragging={active:true,idx,startX:e.clientX,startY:e.clientY,startTx:m.tx||0,startTy:m.ty||0};
-  document.addEventListener('mousemove',vpDragMove);
-  document.addEventListener('mouseup',vpDragEnd);
-};
-window.vpTouchStart=function(e,idx){
-  const t=e.touches[0];
-  const m=currentPhotoMeta[idx]||{tx:0,ty:0};
-  vpDragging={active:true,idx,startX:t.clientX,startY:t.clientY,startTx:m.tx||0,startTy:m.ty||0};
-  document.addEventListener('touchmove',vpTouchMove,{passive:false});
-  document.addEventListener('touchend',vpDragEnd);
-};
-function vpTouchMove(e){e.preventDefault();vpDragMove(e.touches[0]);}
-function vpDragMove(e){
-  if(!vpDragging.active)return;
-  const{idx,startX,startY,startTx,startTy}=vpDragging;
-  const m=currentPhotoMeta[idx];
-  const stage=document.getElementById('stage-'+idx);
-  if(!m||!stage)return;
-  const zoom=m.zoom||1;
-  const stW=parseFloat(stage.dataset.stW)||stage.offsetWidth||560;
-  const stH=parseFloat(stage.dataset.stH)||stage.offsetHeight||320;
-  const natW=parseFloat(stage.dataset.natW)||1;
-  const natH=parseFloat(stage.dataset.natH)||1;
-  const dispW=stW*zoom;
-  const dispH=(natH/natW)*stW*zoom;
-  // max pan = half the overflow in each direction
-  const maxX=Math.max(0,(dispW-stW)/2);
-  const maxY=Math.max(0,(dispH-stH)/2);
-  const newTx=Math.max(-maxX,Math.min(maxX,startTx+(e.clientX-startX)));
-  const newTy=Math.max(-maxY,Math.min(maxY,startTy+(e.clientY-startY)));
-  m.tx=newTx;m.ty=newTy;
-  applyImgTransform(idx);
-}
-function vpDragEnd(){
-  vpDragging.active=false;
-  document.removeEventListener('mousemove',vpDragMove);
-  document.removeEventListener('mouseup',vpDragEnd);
-  document.removeEventListener('touchmove',vpTouchMove);
-  document.removeEventListener('touchend',vpDragEnd);
+  let dragging=false,lastX=0,lastY=0;
+
+  function onDown(cx,cy){
+    dragging=true; lastX=cx; lastY=cy;
+    canvas.style.cursor='grabbing';
+  }
+  function onMove(cx,cy){
+    if(!dragging)return;
+    const dx=cx-lastX, dy=cy-lastY;
+    lastX=cx; lastY=cy;
+    const m=currentPhotoMeta[idx]||{zoom:1,ox:50,oy:50};
+    const img=editorImgs[idx];
+    const{cw,ch}=getCanvasSize(idx);
+    const zoom=parseFloat(m.zoom)||1;
+    const baseW=cw, baseH=cw*(img.naturalHeight/img.naturalWidth);
+    const dw=baseW*zoom, dh=baseH*zoom;
+    const extraW=Math.max(0,dw-cw);
+    const extraH=Math.max(0,dh-ch);
+    // sensitivity: pixels moved / extra pixels available → % change
+    const senX=extraW>0?50/extraW:0;
+    const senY=extraH>0?50/extraH:0;
+    const newOx=Math.max(0,Math.min(100,(parseFloat(m.ox)||50)-dx*senX));
+    const newOy=Math.max(0,Math.min(100,(parseFloat(m.oy)||50)-dy*senY));
+    currentPhotoMeta[idx].ox=newOx;
+    currentPhotoMeta[idx].oy=newOy;
+    drawCanvas(idx);
+  }
+  function onUp(){ dragging=false; canvas.style.cursor='grab'; }
+
+  canvas.addEventListener('mousedown',e=>{e.preventDefault();onDown(e.clientX,e.clientY);});
+  window.addEventListener('mousemove',e=>{ if(dragging)onMove(e.clientX,e.clientY); });
+  window.addEventListener('mouseup',onUp);
+
+  canvas.addEventListener('touchstart',e=>{e.preventDefault();const t=e.touches[0];onDown(t.clientX,t.clientY);},{passive:false});
+  canvas.addEventListener('touchmove',e=>{e.preventDefault();const t=e.touches[0];onMove(t.clientX,t.clientY);},{passive:false});
+  canvas.addEventListener('touchend',onUp);
 }
 
 // ── SAVE ──
@@ -677,29 +674,11 @@ window.savePlace=async function(){
     emoji:document.getElementById('fEmoji').value.trim(),
     mapUrl:document.getElementById('fMapUrl').value.trim(),
     photos:currentPhotos,
-    photoMeta:currentPhotoMeta.map((m,i)=>{
-      // convert tx/ty/zoom into object-position % for front-end rendering
-      const stage=document.getElementById('stage-'+i);
-      const zoom=parseFloat(m.zoom)||1;
-      const tx=parseFloat(m.tx)||0;
-      const ty=parseFloat(m.ty)||0;
-      let ox=50,oy=50;
-      if(stage){
-        const stW=parseFloat(stage.dataset.stW)||stage.offsetWidth||560;
-        const stH=parseFloat(stage.dataset.stH)||stage.offsetHeight||320;
-        const natW=parseFloat(stage.dataset.natW)||1;
-        const natH=parseFloat(stage.dataset.natH)||1;
-        const dispW=stW*zoom;
-        const dispH=(natH/natW)*stW*zoom;
-        const maxX=Math.max(0,(dispW-stW)/2);
-        const maxY=Math.max(0,(dispH-stH)/2);
-        if(maxX>0) ox=50-((tx/maxX)*50);
-        if(maxY>0) oy=50-((ty/maxY)*50);
-        ox=Math.max(0,Math.min(100,ox));
-        oy=Math.max(0,Math.min(100,oy));
-      }
-      return{zoom,tx,ty,ox,oy};
-    }),
+    photoMeta:currentPhotoMeta.map(m=>({
+      zoom:parseFloat(m.zoom)||1,
+      ox:parseFloat(m.ox)||50,
+      oy:parseFloat(m.oy)||50,
+    })),
     updatedAt:Date.now(),
   };
   try{
