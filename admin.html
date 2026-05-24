@@ -116,44 +116,56 @@ tr:hover td{background:#FAFAF8}
 
 /* PHOTO EDITOR CARD */
 .preview-item{
-  position:relative;border-radius:var(--radius-sm);
-  border:1px solid var(--border);background:var(--surface);
-  overflow:hidden;width:100%;
-  display:flex;flex-direction:column;
+  border-radius:var(--radius-sm);border:1px solid var(--border);
+  background:var(--surface);width:100%;display:flex;flex-direction:column;
+  overflow:hidden;
 }
-.preview-viewport{
-  width:100%;height:200px;
-  overflow:hidden;position:relative;cursor:grab;
-  background:var(--surface);user-select:none;border-radius:0;
+.preview-num{
+  padding:6px 12px;font-size:11px;color:var(--hint);
+  font-weight:500;background:var(--surface);border-bottom:1px solid var(--border);
 }
-.preview-viewport:active{cursor:grabbing}
-.preview-viewport img{
-  position:absolute;
-  top:50%;left:50%;
-  transform:translate(calc(-50% + var(--tx,0px)), calc(-50% + var(--ty,0px))) scale(var(--zoom,1));
-  transform-origin:center center;
-  pointer-events:none;
-  width:100%;height:100%;
-  object-fit:cover;
-  min-width:100%;min-height:100%;
+/* outer stage: shows full image, dimmed outside crop area */
+.preview-stage{
+  width:100%;position:relative;
+  background:#1a1a1a;overflow:hidden;
+  cursor:grab;user-select:none;
+  /* height set inline via aspect-ratio of original image */
+}
+.preview-stage:active{cursor:grabbing}
+.preview-stage img{
+  position:absolute;top:0;left:0;
+  /* width/height/transform set by JS */
+  pointer-events:none;display:block;
+  transform-origin:top left;
+}
+/* crop overlay — the bright window showing what front-end will see (16:9) */
+.crop-overlay{
+  position:absolute;pointer-events:none;
+  border:2px solid rgba(255,255,255,0.9);
+  box-shadow:0 0 0 9999px rgba(0,0,0,0.45);
+  z-index:2;
+}
+.crop-hint{
+  position:absolute;bottom:6px;left:50%;transform:translateX(-50%);
+  background:rgba(0,0,0,0.55);color:#fff;
+  font-size:10px;padding:2px 10px;border-radius:10px;
+  white-space:nowrap;z-index:3;pointer-events:none;
 }
 .preview-controls{
   padding:10px 12px;display:flex;flex-direction:column;gap:8px;
   background:var(--card);border-top:1px solid var(--border);
 }
 .zoom-row{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
-.zoom-row span{min-width:28px;text-align:right;font-weight:500;color:var(--ink)}
 .zoom-row input[type=range]{flex:1;height:4px;accent-color:var(--red)}
+.zoom-val{min-width:32px;text-align:right;font-weight:500;color:var(--ink);font-size:12px}
 .preview-actions{display:flex;justify-content:space-between;align-items:center}
-.preview-hint{font-size:11px;color:var(--hint)}
+.preview-hint-txt{font-size:11px;color:var(--hint)}
 .preview-remove{
   font-size:11px;padding:4px 10px;border-radius:4px;
   border:1px solid var(--border);background:var(--bg);
-  color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif;
-  transition:all 0.12s;
+  color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.12s;
 }
 .preview-remove:hover{border-color:var(--red);color:var(--red);background:var(--red-light)}
-.preview-num{font-size:11px;color:var(--hint);font-weight:500}
 
 /* TOAST */
 #toast{position:fixed;bottom:1.5rem;right:1.5rem;z-index:999;background:#1A1A1A;color:#fff;padding:12px 20px;border-radius:var(--radius-sm);font-size:14px;opacity:0;transform:translateY(8px);transition:all 0.2s;pointer-events:none;max-width:300px}
@@ -479,45 +491,123 @@ function renderPhotoPreviews(){
   wrap.innerHTML=currentPhotos.map((url,i)=>{
     const m=currentPhotoMeta[i]||{zoom:1,tx:0,ty:0};
     const zoom=parseFloat(m.zoom)||1;
-    const tx=parseFloat(m.tx)||0;
-    const ty=parseFloat(m.ty)||0;
-    return `<div class="preview-item" style="width:100%">
-      <div class="preview-num" style="padding:6px 12px;font-size:11px;color:var(--hint);font-weight:500;background:var(--surface);border-bottom:1px solid var(--border)">Photo ${i+1} of ${currentPhotos.length}</div>
-      <div class="preview-viewport" id="vp-${i}"
+    return `<div class="preview-item">
+      <div class="preview-num">Photo ${i+1} of ${currentPhotos.length}</div>
+      <div class="preview-stage" id="stage-${i}"
         onmousedown="vpDragStart(event,${i})"
         ontouchstart="vpTouchStart(event,${i})">
-        <img id="pimg-${i}" src="${esc(url)}" alt=""
-          style="--zoom:${zoom};--tx:${tx}px;--ty:${ty}px" draggable="false"/>
+        <img id="pimg-${i}" src="${esc(url)}" alt="" draggable="false"
+          onload="initStage(${i})"/>
+        <div class="crop-overlay" id="crop-${i}"></div>
+        <div class="crop-hint">Drag to reposition · Bright area = visible on site</div>
       </div>
       <div class="preview-controls">
         <div class="zoom-row">
-          <svg style="width:14px;height:14px;stroke:var(--muted);flex-shrink:0" fill="none" viewBox="0 0 24 24" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/><path d="M8 11h6"/></svg>
-          <input type="range" min="0.5" max="2.0" step="0.05" value="${zoom.toFixed(2)}"
+          <svg style="width:14px;height:14px;stroke:var(--muted);flex-shrink:0" fill="none" viewBox="0 0 24 24" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M8 11h6"/></svg>
+          <input type="range" min="0.5" max="2.0" step="0.05" value="${zoom.toFixed(2)}" id="zslider-${i}"
             oninput="updateZoom(${i},this.value)" style="flex:1"/>
-          <svg style="width:14px;height:14px;stroke:var(--muted);flex-shrink:0" fill="none" viewBox="0 0 24 24" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/><path d="M8 11h6M11 8v6"/></svg>
-          <span id="zlabel-${i}">${zoom.toFixed(1)}x</span>
+          <svg style="width:14px;height:14px;stroke:var(--muted);flex-shrink:0" fill="none" viewBox="0 0 24 24" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M8 11h6M11 8v6"/></svg>
+          <span class="zoom-val" id="zlabel-${i}">${zoom.toFixed(1)}x</span>
         </div>
         <div class="preview-actions">
-          <span class="preview-hint">Drag image to reposition</span>
+          <span class="preview-hint-txt">Bright area = what visitors see on the card</span>
           <button class="preview-remove" onclick="removePhoto(${i})">Remove</button>
         </div>
       </div>
     </div>`;
   }).join('');
   document.getElementById('uploadArea').style.display=currentPhotos.length>=5?'none':'block';
+  // init stages for already-loaded images
+  currentPhotos.forEach((_,i)=>{
+    const img=document.getElementById('pimg-'+i);
+    if(img&&img.complete) initStage(i);
+  });
+}
+
+// CROP STAGE: fit full image into stage, show 16:9 crop overlay
+const CROP_RATIO=16/9;
+const stageW=560; // approx modal width in px — recalculated from actual DOM
+
+window.initStage=function(idx){
+  const img=document.getElementById('pimg-'+idx);
+  const stage=document.getElementById('stage-'+idx);
+  if(!img||!stage)return;
+  const natW=img.naturalWidth,natH=img.naturalHeight;
+  if(!natW||!natH)return;
+
+  const m=currentPhotoMeta[idx]||{zoom:1,tx:0,ty:0};
+  const stW=stage.offsetWidth||560;
+
+  // Stage height = show full image at zoom=1 scaled to fit width
+  // but minimum = crop height so we always see the crop box fully
+  const scaledH=stW*(natH/natW);
+  const cropH=stW/CROP_RATIO;
+  const stH=Math.max(scaledH,cropH,180);
+  stage.style.height=stH+'px';
+
+  // store natural dims for positioning
+  stage.dataset.natW=natW;
+  stage.dataset.natH=natH;
+  stage.dataset.stW=stW;
+  stage.dataset.stH=stH;
+
+  applyImgTransform(idx);
+};
+
+function applyImgTransform(idx){
+  const img=document.getElementById('pimg-'+idx);
+  const stage=document.getElementById('stage-'+idx);
+  const crop=document.getElementById('crop-'+idx);
+  if(!img||!stage)return;
+
+  const m=currentPhotoMeta[idx]||{zoom:1,tx:0,ty:0};
+  const zoom=Math.min(2.0,Math.max(0.5,parseFloat(m.zoom)||1));
+  const tx=parseFloat(m.tx)||0;
+  const ty=parseFloat(m.ty)||0;
+
+  const stW=parseFloat(stage.dataset.stW)||stage.offsetWidth||560;
+  const stH=parseFloat(stage.dataset.stH)||stage.offsetHeight||320;
+  const natW=parseFloat(stage.dataset.natW)||img.naturalWidth||1;
+  const natH=parseFloat(stage.dataset.natH)||img.naturalHeight||1;
+
+  // Scale image so its width = stW * zoom (fit width, then zoom)
+  const baseScale=stW/natW;
+  const finalScale=baseScale*zoom;
+  const dispW=natW*finalScale;
+  const dispH=natH*finalScale;
+
+  // center image in stage, then apply translation
+  const baseX=(stW-dispW)/2+tx;
+  const baseY=(stH-dispH)/2+ty;
+
+  img.style.width=dispW+'px';
+  img.style.height=dispH+'px';
+  img.style.transform=`translate(${baseX}px,${baseY}px)`;
+  img.style.top='0';img.style.left='0';
+
+  // crop overlay: 16:9 centered in stage
+  const cropW=stW;
+  const cropH=stW/CROP_RATIO;
+  const cropTop=(stH-cropH)/2;
+  if(crop){
+    crop.style.left='0';
+    crop.style.top=cropTop+'px';
+    crop.style.width=cropW+'px';
+    crop.style.height=cropH+'px';
+  }
 }
 
 // zoom slider
 window.updateZoom=function(idx,val){
   const zoom=Math.min(2.0,Math.max(0.5,parseFloat(val)));
+  if(!currentPhotoMeta[idx])currentPhotoMeta[idx]={zoom:1,tx:0,ty:0};
   currentPhotoMeta[idx].zoom=zoom;
-  const img=document.getElementById('pimg-'+idx);
-  if(img) img.style.setProperty('--zoom',zoom);
+  applyImgTransform(idx);
   const lbl=document.getElementById('zlabel-'+idx);
-  if(lbl) lbl.textContent=zoom.toFixed(1)+'x';
+  if(lbl)lbl.textContent=zoom.toFixed(1)+'x';
 };
 
-// drag to reposition — uses pixel translation
+// drag to reposition
 let vpDragging={active:false,idx:-1,startX:0,startY:0,startTx:0,startTy:0};
 
 window.vpDragStart=function(e,idx){
@@ -538,17 +628,23 @@ function vpTouchMove(e){e.preventDefault();vpDragMove(e.touches[0]);}
 function vpDragMove(e){
   if(!vpDragging.active)return;
   const{idx,startX,startY,startTx,startTy}=vpDragging;
-  const zoom=currentPhotoMeta[idx].zoom||1;
-  // limit how far you can pan based on zoom level
-  const vp=document.getElementById('vp-'+idx);
-  const maxShift=vp?(vp.offsetWidth*(zoom-1)/2):100;
-  const maxShiftY=vp?(vp.offsetHeight*(zoom-1)/2):100;
-  const newTx=Math.max(-maxShift,Math.min(maxShift,startTx+(e.clientX-startX)));
-  const newTy=Math.max(-maxShiftY,Math.min(maxShiftY,startTy+(e.clientY-startY)));
-  currentPhotoMeta[idx].tx=newTx;
-  currentPhotoMeta[idx].ty=newTy;
-  const img=document.getElementById('pimg-'+idx);
-  if(img){img.style.setProperty('--tx',newTx+'px');img.style.setProperty('--ty',newTy+'px');}
+  const m=currentPhotoMeta[idx];
+  const stage=document.getElementById('stage-'+idx);
+  if(!m||!stage)return;
+  const zoom=m.zoom||1;
+  const stW=parseFloat(stage.dataset.stW)||stage.offsetWidth||560;
+  const stH=parseFloat(stage.dataset.stH)||stage.offsetHeight||320;
+  const natW=parseFloat(stage.dataset.natW)||1;
+  const natH=parseFloat(stage.dataset.natH)||1;
+  const dispW=stW*zoom;
+  const dispH=(natH/natW)*stW*zoom;
+  // max pan = half the overflow in each direction
+  const maxX=Math.max(0,(dispW-stW)/2);
+  const maxY=Math.max(0,(dispH-stH)/2);
+  const newTx=Math.max(-maxX,Math.min(maxX,startTx+(e.clientX-startX)));
+  const newTy=Math.max(-maxY,Math.min(maxY,startTy+(e.clientY-startY)));
+  m.tx=newTx;m.ty=newTy;
+  applyImgTransform(idx);
 }
 function vpDragEnd(){
   vpDragging.active=false;
@@ -581,7 +677,29 @@ window.savePlace=async function(){
     emoji:document.getElementById('fEmoji').value.trim(),
     mapUrl:document.getElementById('fMapUrl').value.trim(),
     photos:currentPhotos,
-    photoMeta:currentPhotoMeta,
+    photoMeta:currentPhotoMeta.map((m,i)=>{
+      // convert tx/ty/zoom into object-position % for front-end rendering
+      const stage=document.getElementById('stage-'+i);
+      const zoom=parseFloat(m.zoom)||1;
+      const tx=parseFloat(m.tx)||0;
+      const ty=parseFloat(m.ty)||0;
+      let ox=50,oy=50;
+      if(stage){
+        const stW=parseFloat(stage.dataset.stW)||stage.offsetWidth||560;
+        const stH=parseFloat(stage.dataset.stH)||stage.offsetHeight||320;
+        const natW=parseFloat(stage.dataset.natW)||1;
+        const natH=parseFloat(stage.dataset.natH)||1;
+        const dispW=stW*zoom;
+        const dispH=(natH/natW)*stW*zoom;
+        const maxX=Math.max(0,(dispW-stW)/2);
+        const maxY=Math.max(0,(dispH-stH)/2);
+        if(maxX>0) ox=50-((tx/maxX)*50);
+        if(maxY>0) oy=50-((ty/maxY)*50);
+        ox=Math.max(0,Math.min(100,ox));
+        oy=Math.max(0,Math.min(100,oy));
+      }
+      return{zoom,tx,ty,ox,oy};
+    }),
     updatedAt:Date.now(),
   };
   try{
