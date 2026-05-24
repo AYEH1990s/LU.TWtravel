@@ -114,7 +114,7 @@ tr:hover td{background:#FAFAF8}
 .upload-progress{font-size:12px;color:var(--hint);margin-top:6px;display:none}
 .photos-preview{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:10px;margin-top:4px}
 
-/* PHOTO EDITOR CARD */
+/* PHOTO EDITOR */
 .preview-item{
   border-radius:var(--radius-sm);border:1px solid var(--border);
   background:var(--surface);width:100%;display:flex;flex-direction:column;
@@ -129,9 +129,11 @@ tr:hover td{background:#FAFAF8}
   cursor:grab;user-select:none;aspect-ratio:16/9;background:#111;
 }
 .preview-stage:active{cursor:grabbing}
-.preview-stage img{
-  position:absolute;
-  object-fit:cover;pointer-events:none;
+.preview-bg{
+  position:absolute;inset:0;
+  background-repeat:no-repeat;
+  background-size:cover;
+  pointer-events:none;
 }
 .preview-controls{
   padding:10px 12px;display:flex;flex-direction:column;gap:8px;
@@ -478,72 +480,60 @@ function renderPhotoPreviews(){
     const zoom=parseFloat(m.zoom)||1;
     const ox=parseFloat(m.ox)||50;
     const oy=parseFloat(m.oy)||50;
+    const bgSize=`${zoom*100}%`;
     return `<div class="preview-item">
       <div class="preview-num">Photo ${i+1} of ${currentPhotos.length}</div>
       <div class="preview-stage" id="stage-${i}">
-        <img id="pimg-${i}" src="${esc(url)}" alt="" draggable="false"
-          style="object-position:${ox}% ${oy}%;width:${zoom*100}%;height:${zoom*100}%;top:${(100-zoom*100)/2}%;left:${(100-zoom*100)/2}%"/>
+        <div class="preview-bg" id="pbg-${i}"
+          style="background-image:url('${esc(url)}');background-size:${bgSize};background-position:${ox}% ${oy}%"></div>
       </div>
       <div class="preview-controls">
         <div class="zoom-row">
           <svg style="width:14px;height:14px;stroke:var(--muted);flex-shrink:0" fill="none" viewBox="0 0 24 24" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M8 11h6"/></svg>
-          <input type="range" min="1.0" max="2.0" step="0.05" value="${zoom.toFixed(2)}" id="zslider-${i}"
+          <input type="range" min="1.0" max="3.0" step="0.05" value="${zoom.toFixed(2)}" id="zslider-${i}"
             oninput="updateZoom(${i},this.value)" style="flex:1"/>
           <svg style="width:14px;height:14px;stroke:var(--muted);flex-shrink:0" fill="none" viewBox="0 0 24 24" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M8 11h6M11 8v6"/></svg>
           <span class="zoom-val" id="zlabel-${i}">${zoom.toFixed(1)}x</span>
         </div>
         <div class="preview-actions">
-          <span class="preview-hint-txt">Drag to reposition · ${ox.toFixed(0)}% ${oy.toFixed(0)}%</span>
+          <span class="preview-hint-txt" id="hint-${i}">Drag to reposition · ${ox.toFixed(0)}% ${oy.toFixed(0)}%</span>
           <button class="preview-remove" onclick="removePhoto(${i})">Remove</button>
         </div>
       </div>
     </div>`;
   }).join('');
   document.getElementById('uploadArea').style.display=currentPhotos.length>=5?'none':'block';
-  // bind drag to each stage
   currentPhotos.forEach((_,i)=>bindStageDrag(i));
 }
 
 window.updateZoom=function(idx,val){
-  const zoom=Math.min(2.0,Math.max(1.0,parseFloat(val)));
+  const zoom=Math.min(3.0,Math.max(1.0,parseFloat(val)));
   if(!currentPhotoMeta[idx])currentPhotoMeta[idx]={zoom:1,ox:50,oy:50};
   currentPhotoMeta[idx].zoom=zoom;
-  applyImgStyle(idx);
+  applyBgStyle(idx);
   const lbl=document.getElementById('zlabel-'+idx);
   if(lbl)lbl.textContent=zoom.toFixed(1)+'x';
 };
 
-function applyImgStyle(idx){
-  const img=document.getElementById('pimg-'+idx);
-  const stage=document.getElementById('stage-'+idx);
-  if(!img||!stage)return;
+function applyBgStyle(idx){
+  const bg=document.getElementById('pbg-'+idx);
+  if(!bg)return;
   const m=currentPhotoMeta[idx]||{zoom:1,ox:50,oy:50};
   const zoom=parseFloat(m.zoom)||1;
   const ox=parseFloat(m.ox)||50;
   const oy=parseFloat(m.oy)||50;
-  // Use same approach as frontend: object-fit:cover + object-position
-  // Zoom achieved by making the img bigger than the container
-  const pct=zoom*100;
-  img.style.width=pct+'%';
-  img.style.height=pct+'%';
-  img.style.top=((100-pct)/2)+'%';
-  img.style.left=((100-pct)/2)+'%';
-  img.style.objectPosition=`${ox}% ${oy}%`;
-  img.style.transform='';
-  img.style.transformOrigin='';
-  // update hint label
-  const actions=stage.nextElementSibling;
-  if(actions){const hint=actions.querySelector('.preview-hint-txt');if(hint)hint.textContent=`Drag to reposition · ${ox.toFixed(0)}% ${oy.toFixed(0)}%`;}
+  bg.style.backgroundSize=`${zoom*100}%`;
+  bg.style.backgroundPosition=`${ox}% ${oy}%`;
+  const hint=document.getElementById('hint-'+idx);
+  if(hint)hint.textContent=`Drag to reposition · ${ox.toFixed(0)}% ${oy.toFixed(0)}%`;
 }
 
 function bindStageDrag(idx){
   const stage=document.getElementById('stage-'+idx);
   if(!stage)return;
   let dragging=false,lx=0,ly=0;
-
   stage.addEventListener('mousedown',e=>{
-    e.preventDefault();
-    dragging=true;lx=e.clientX;ly=e.clientY;
+    e.preventDefault();dragging=true;lx=e.clientX;ly=e.clientY;
     stage.style.cursor='grabbing';
   });
   window.addEventListener('mousemove',e=>{
@@ -551,34 +541,37 @@ function bindStageDrag(idx){
     moveDrag(idx,e.clientX-lx,e.clientY-ly);
     lx=e.clientX;ly=e.clientY;
   });
-  window.addEventListener('mouseup',()=>{
-    if(dragging){dragging=false;stage.style.cursor='grab';}
-  });
+  window.addEventListener('mouseup',()=>{if(dragging){dragging=false;stage.style.cursor='grab';}});
   stage.addEventListener('touchstart',e=>{
-    e.preventDefault();
-    dragging=true;lx=e.touches[0].clientX;ly=e.touches[0].clientY;
+    e.preventDefault();dragging=true;
+    lx=e.touches[0].clientX;ly=e.touches[0].clientY;
   },{passive:false});
   stage.addEventListener('touchmove',e=>{
-    e.preventDefault();
-    if(!dragging)return;
+    e.preventDefault();if(!dragging)return;
     moveDrag(idx,e.touches[0].clientX-lx,e.touches[0].clientY-ly);
     lx=e.touches[0].clientX;ly=e.touches[0].clientY;
   },{passive:false});
-  stage.addEventListener('touchend',()=>{dragging=false;});
+  stage.addEventListener('touchend',()=>{dragging=false;stage.style.cursor='grab';});
 }
 
 function moveDrag(idx,dx,dy){
   if(!currentPhotoMeta[idx])currentPhotoMeta[idx]={zoom:1,ox:50,oy:50};
   const m=currentPhotoMeta[idx];
+  const zoom=parseFloat(m.zoom)||1;
+  // background-position % moves the image relative to the overflow
+  // More zoom = more movement range but same % sensitivity
+  // Sensitivity: 1px mouse = how many % background-position change
   const stage=document.getElementById('stage-'+idx);
   if(!stage)return;
-  const zoom=parseFloat(m.zoom)||1;
-  // sensitivity scaled by zoom: more zoom = more range to move
-  const senX=100/(stage.offsetWidth*zoom);
-  const senY=100/(stage.offsetHeight*zoom);
-  m.ox=Math.max(0,Math.min(100,(parseFloat(m.ox)||50)-dx*senX));
-  m.oy=Math.max(0,Math.min(100,(parseFloat(m.oy)||50)-dy*senY));
-  applyImgStyle(idx);
+  const W=stage.offsetWidth||400;
+  const H=stage.offsetHeight||225;
+  // At zoom=2, image is 2x the container, so 100% range covers (2x-1x)=1x of image
+  // Moving 1px should shift position by 1/(W*(zoom-1)) * 100 percent... but
+  // simpler: use fixed sensitivity that feels natural
+  const sen=100/Math.max(W,H);
+  m.ox=Math.max(0,Math.min(100,(m.ox||50)-dx*sen));
+  m.oy=Math.max(0,Math.min(100,(m.oy||50)-dy*sen));
+  applyBgStyle(idx);
 }
 
 // ── SAVE ──
