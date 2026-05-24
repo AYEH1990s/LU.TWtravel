@@ -527,10 +527,17 @@ function drawCanvas(idx){
   const ox=Math.max(0,Math.min(100,parseFloat(m.ox)||50));
   const oy=Math.max(0,Math.min(100,parseFloat(m.oy)||50));
   const dw=SW*zoom, dh=(SW/imgAR)*zoom;
-  const dx=(SW-dw)*(ox/100);
-  const dy=(SH-dh)*(oy/100);
+  // Use pixel offsets (tx/ty) if available, else compute from ox/oy
+  let imgDx, imgDy;
+  if(m.tx!==undefined){
+    imgDx=m.tx;
+    imgDy=m.ty||0;
+  } else {
+    imgDx=(SW-dw)*(ox/100);
+    imgDy=(SH-dh)*(oy/100);
+  }
   ctx.clearRect(0,0,SW,SH);
-  ctx.drawImage(img,dx,dy,dw,dh);
+  ctx.drawImage(img,imgDx,imgDy,dw,dh);
   ctx.fillStyle='rgba(0,0,0,0.5)';
   ctx.fillRect(0,0,SW,SH);
   const cropTop=(SH-cropH)/2;
@@ -538,7 +545,7 @@ function drawCanvas(idx){
   ctx.beginPath();
   ctx.rect(0,cropTop,SW,cropH);
   ctx.clip();
-  ctx.drawImage(img,dx,dy,dw,dh);
+  ctx.drawImage(img,imgDx,imgDy,dw,dh);
   ctx.restore();
   ctx.strokeStyle='rgba(255,255,255,0.85)';
   ctx.lineWidth=2;
@@ -549,6 +556,9 @@ window.updateZoom=function(idx,val){
   const zoom=Math.max(0.5,Math.min(2.0,parseFloat(val)));
   if(!currentPhotoMeta[idx])currentPhotoMeta[idx]={zoom:1,ox:50,oy:50};
   currentPhotoMeta[idx].zoom=zoom;
+  // Reset pixel offsets so they recalculate from ox/oy on next drag
+  delete currentPhotoMeta[idx].tx;
+  delete currentPhotoMeta[idx].ty;
   drawCanvas(idx);
   const lbl=document.getElementById('zlabel-'+idx);
   if(lbl)lbl.textContent=zoom.toFixed(1)+'x';
@@ -598,7 +608,6 @@ function applyDrag(idx,dx,dy){
   const m=currentPhotoMeta[idx];
   const img=loadedImgs[idx];
   if(!img)return;
-  // Use stage offsetWidth (CSS pixels) — consistent with drawCanvas
   const stage=document.getElementById('stage-'+idx);
   const SW=stage?stage.offsetWidth:560;
   const zoom=parseFloat(m.zoom)||1;
@@ -607,24 +616,30 @@ function applyDrag(idx,dx,dy){
   const dh=(SW/imgAR)*zoom;
   const cropH=SW/CROP_AR;
   const SH=Math.max(cropH,SW/imgAR);
-  // Sensitivity: moving dx pixels shifts ox by dx/(SW-dw)*100
-  // When zoom<1: dw<SW, so image has "room" to move right (positive dx increases ox)
-  // When zoom>1: dw>SW, so image extends beyond stage (positive dx increases ox = shifts image left, showing more right)
-  // Both cases: senX = 100 / |dw - SW| but direction:
-  // dx>0 (move right) should increase ox when zoom>1 (show more of right side)
-  const overX=dw-SW; // positive when zoomed in, negative when zoomed out
-  const overY=dh-SH;
-  const senX=Math.abs(overX)>2?(100/Math.abs(overX)):0;
-  const senY=Math.abs(overY)>2?(100/Math.abs(overY)):0;
-  // When overX>0 (zoom>1): drag right (dx>0) → show right side → increase ox → -dx*senX is wrong
-  // Actually: drag right moves image right → image shifts right → we see more of left side → ox decreases
-  // So: m.ox -= dx * senX (when zoom>1, overX>0)
-  // When overX<0 (zoom<1): image smaller than stage, drag right moves anchor right → ox increases
-  // So direction flips: m.ox += dx * senX  → m.ox -= dx * (senX * sign(overX))
-  const dirX=overX>=0?1:-1;
-  const dirY=overY>=0?1:-1;
-  m.ox=Math.max(0,Math.min(100,(m.ox||50)-dx*senX*dirX));
-  m.oy=Math.max(0,Math.min(100,(m.oy||50)-dy*senY*dirY));
+  // Range of anchor: ox=0 → dx_img=0, ox=100 → dx_img=(SW-dw)
+  // Total anchor range in pixels = |SW-dw|
+  // dragging right (dx>0) moves image right → anchor (dx_img) increases → ox increases when dw<SW, decreases when dw>SW
+  // Simplify: just use pixel-based offset stored directly, convert to % only for save
+  // Store tx/ty as pixel offsets from centre, clamp to valid range
+  if(m.tx===undefined){
+    // Convert existing ox/oy to tx/ty
+    m.tx=(SW-dw)*(m.ox/100)-(SW-dw)/2||0;
+    m.ty=(SH-dh)*(m.oy/100)-(SH-dh)/2||0;
+  }
+  m.tx=(m.tx||0)+dx;
+  m.ty=(m.ty||0)+dy;
+  // Clamp: image must stay within stage bounds
+  const minTx=Math.min(0,SW-dw);
+  const maxTx=Math.max(0,SW-dw);
+  const minTy=Math.min(0,SH-dh);
+  const maxTy=Math.max(0,SH-dh);
+  m.tx=Math.max(minTx,Math.min(maxTx,m.tx));
+  m.ty=Math.max(minTy,Math.min(maxTy,m.ty));
+  // Convert back to ox/oy % for storage and frontend use
+  const rangeX=SW-dw;
+  const rangeY=SH-dh;
+  m.ox=rangeX!==0?Math.max(0,Math.min(100,(m.tx/rangeX)*100)):50;
+  m.oy=rangeY!==0?Math.max(0,Math.min(100,(m.ty/rangeY)*100)):50;
 }
 
 // ── SAVE ──
