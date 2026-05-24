@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Admin — Taiwan Travel Guide</title>
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -18,136 +18,86 @@
 }
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh}
 
-/* ── LOGIN ── */
-#loginScreen{
-  min-height:100vh;display:flex;align-items:center;justify-content:center;
-  background:#1A1A1A;
-}
-.login-card{
-  background:var(--card);border-radius:16px;
-  padding:2.5rem;width:100%;max-width:380px;
-  box-shadow:0 20px 60px rgba(0,0,0,0.3);
-}
+/* LOGIN */
+#loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:#1A1A1A}
+.login-card{background:var(--card);border-radius:16px;padding:2.5rem;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,0.3)}
 .login-logo{font-family:'Playfair Display',serif;font-size:22px;color:var(--ink);margin-bottom:4px;text-align:center}
 .login-sub{font-size:13px;color:var(--hint);text-align:center;margin-bottom:1.75rem}
-
-.login-error{
-  background:var(--red-light);color:var(--red);
-  font-size:13px;padding:10px 14px;border-radius:var(--radius-sm);
-  margin-bottom:14px;display:none;
-}
+.login-error{background:var(--red-light);color:var(--red);font-size:13px;padding:10px 14px;border-radius:var(--radius-sm);margin-bottom:14px;display:none}
 label{display:block;font-size:12px;font-weight:500;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px}
-input[type=email],input[type=password],input[type=text],input[type=number],input[type=url],textarea,select{
-  width:100%;padding:10px 12px;border:1px solid var(--border);
-  border-radius:var(--radius-sm);font-size:14px;
-  font-family:'DM Sans',sans-serif;color:var(--ink);
-  background:var(--card);outline:none;transition:border-color 0.15s;
-}
+input[type=email],input[type=password],input[type=text],input[type=number],input[type=url],textarea,select{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:'DM Sans',sans-serif;color:var(--ink);background:var(--card);outline:none;transition:border-color 0.15s}
 input:focus,textarea:focus,select:focus{border-color:var(--red)}
 textarea{resize:vertical;line-height:1.5}
 .field{margin-bottom:16px}
-
-.btn-primary{
-  width:100%;padding:11px;border:none;border-radius:var(--radius-sm);
-  font-size:14px;font-weight:500;font-family:'DM Sans',sans-serif;
-  cursor:pointer;background:var(--red);color:#fff;transition:all 0.15s;
-}
+.btn-primary{width:100%;padding:11px;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer;background:var(--red);color:#fff;transition:all 0.15s}
 .btn-primary:hover{background:var(--red-mid)}
 .btn-primary:disabled{opacity:0.6;cursor:not-allowed}
-
-.divider{
-  display:flex;align-items:center;gap:10px;
-  margin:16px 0;font-size:12px;color:var(--hint);
-}
+.divider{display:flex;align-items:center;gap:10px;margin:16px 0;font-size:12px;color:var(--hint)}
 .divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
-
-.btn-google{
-  width:100%;padding:10px;border:1px solid var(--border);
-  border-radius:var(--radius-sm);background:#fff;
-  font-size:14px;font-family:'DM Sans',sans-serif;
-  cursor:pointer;display:flex;align-items:center;justify-content:center;
-  gap:10px;color:var(--ink);font-weight:500;transition:all 0.15s;
-}
+.btn-google{width:100%;padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:#fff;font-size:14px;font-family:'DM Sans',sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;color:var(--ink);font-weight:500;transition:all 0.15s}
 .btn-google:hover{border-color:var(--border-strong);background:#FAFAFA}
 .btn-google:disabled{opacity:0.6;cursor:not-allowed}
 .google-icon{width:18px;height:18px;flex-shrink:0}
 
-/* ── ADMIN SHELL ── */
+/* SHELL */
 #adminShell{display:none}
-.topbar{
-  background:#1A1A1A;padding:0 2rem;
-  display:flex;align-items:center;height:56px;gap:1rem;
-  position:sticky;top:0;z-index:200;
-}
+.topbar{background:#1A1A1A;padding:0 1.5rem;display:flex;align-items:center;height:56px;gap:1rem;position:sticky;top:0;z-index:200}
 .topbar-title{font-family:'Playfair Display',serif;font-size:18px;color:#fff;margin-right:auto}
-.topbar-user{font-size:13px;color:#A0A0A0;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.btn-sm{
-  font-size:12px;padding:6px 14px;border-radius:var(--radius-sm);
-  border:1px solid rgba(255,255,255,0.2);background:transparent;
-  color:#fff;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.15s;
-}
+.topbar-user{font-size:13px;color:#A0A0A0;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.btn-sm{font-size:12px;padding:6px 14px;border-radius:var(--radius-sm);border:1px solid rgba(255,255,255,0.2);background:transparent;color:#fff;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.15s;white-space:nowrap}
 .btn-sm:hover{background:rgba(255,255,255,0.1)}
 .btn-sm.danger{border-color:rgba(181,49,26,0.6);color:#F08070}
 .btn-sm.danger:hover{background:rgba(181,49,26,0.2)}
+.admin-body{max-width:1200px;margin:0 auto;padding:1.5rem}
 
-.admin-body{max-width:1200px;margin:0 auto;padding:2rem}
-
-/* ── STATS ── */
-.stats-bar{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:2rem}
+/* STATS */
+.stats-bar{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:1.5rem}
 .stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.25rem}
 .stat-label{font-size:11px;color:var(--hint);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
 .stat-val{font-size:24px;font-weight:500;color:var(--ink)}
 
-/* ── ACTION ROW ── */
+/* ACTION */
 .action-row{display:flex;align-items:center;gap:10px;margin-bottom:1.5rem;flex-wrap:wrap}
-.action-row h2{font-family:'Playfair Display',serif;font-size:22px;color:var(--ink);margin-right:auto}
-.btn-add{
-  display:flex;align-items:center;gap:6px;
-  padding:9px 18px;border-radius:var(--radius-sm);
-  background:var(--red);color:#fff;border:none;
-  font-size:14px;font-weight:500;font-family:'DM Sans',sans-serif;
-  cursor:pointer;transition:all 0.15s;
-}
+.action-row h2{font-family:'Playfair Display',serif;font-size:20px;color:var(--ink);margin-right:auto}
+.btn-add{display:flex;align-items:center;gap:6px;padding:9px 18px;border-radius:var(--radius-sm);background:var(--red);color:#fff;border:none;font-size:14px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all 0.15s}
 .btn-add:hover{background:var(--red-mid)}
 .btn-add svg{width:16px;height:16px;stroke:#fff}
 
-/* ── TABLE ── */
-.table-wrap{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+/* TABLE */
+.table-wrap{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;overflow-x:auto}
 .admin-search{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
 .admin-search svg{width:16px;height:16px;stroke:var(--hint);flex-shrink:0}
 .admin-search input{border:none;background:transparent;outline:none;font-size:14px;color:var(--ink);flex:1;font-family:'DM Sans',sans-serif}
-table{width:100%;border-collapse:collapse;font-size:13px}
-th{text-align:left;padding:10px 16px;font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--hint);font-weight:500;background:var(--surface);border-bottom:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:600px}
+th{text-align:left;padding:10px 16px;font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--hint);font-weight:500;background:var(--surface);border-bottom:1px solid var(--border);white-space:nowrap}
 td{padding:12px 16px;border-bottom:1px solid var(--border);color:var(--muted);vertical-align:middle}
 tr:last-child td{border-bottom:none}
 tr:hover td{background:#FAFAF8}
 .td-name{color:var(--ink);font-weight:500}
 .td-metro{display:flex;align-items:center;gap:6px}
-.metro-dot{width:8px;height:8px;border-radius:50%;background:var(--red);flex-shrink:0}
+.metro-dot-sm{width:8px;height:8px;border-radius:50%;background:var(--red);flex-shrink:0}
 .td-price{font-weight:500;color:var(--red)}
 .td-price.free{color:var(--green)}
-.td-actions{display:flex;gap:6px}
-.tbl-btn{font-size:11px;padding:4px 10px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.12s}
+.td-actions{display:flex;gap:6px;flex-wrap:wrap}
+.tbl-btn{font-size:11px;padding:4px 10px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.12s;white-space:nowrap}
 .tbl-btn:hover{border-color:var(--border-strong);color:var(--ink)}
 .tbl-btn.del:hover{border-color:var(--red);color:var(--red);background:var(--red-light)}
 .cat-pill{display:inline-block;font-size:10px;padding:2px 8px;border-radius:10px;background:var(--surface);color:var(--muted);border:1px solid var(--border);text-transform:capitalize}
 .empty-row td{text-align:center;padding:3rem;color:var(--hint)}
+.photo-thumb{width:36px;height:36px;border-radius:4px;object-fit:cover;border:1px solid var(--border)}
+.photo-count{font-size:11px;color:var(--hint);margin-left:4px}
 
-/* ── MODAL ── */
-#modalBackdrop{
-  display:none;position:fixed;inset:0;
-  background:rgba(0,0,0,0.45);z-index:500;
-  align-items:flex-start;justify-content:center;
-  padding:2rem 1rem;overflow-y:auto;
-}
+/* MODAL */
+#modalBackdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:flex-start;justify-content:center;padding:1.5rem 1rem;overflow-y:auto}
 #modalBackdrop.open{display:flex}
-.modal{background:var(--card);border-radius:16px;width:100%;max-width:600px;box-shadow:0 24px 80px rgba(0,0,0,0.3);overflow:hidden;margin:auto}
+.modal{background:var(--card);border-radius:16px;width:100%;max-width:640px;box-shadow:0 24px 80px rgba(0,0,0,0.3);overflow:hidden;margin:auto}
 .modal-head{padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
 .modal-head h3{font-family:'Playfair Display',serif;font-size:20px}
-.close-btn{width:32px;height:32px;border-radius:50%;border:1px solid var(--border);background:var(--bg);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.close-btn{width:32px;height:32px;border-radius:50%;border:1px solid var(--border);background:var(--bg);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .close-btn svg{width:16px;height:16px;stroke:var(--muted)}
 .modal-body{padding:1.5rem;display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
 .modal-body .field.full{grid-column:1/-1}
+.section-title{grid-column:1/-1;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:1px;color:var(--hint);margin:8px 0 4px;padding-top:12px;border-top:1px solid var(--border)}
 .modal-footer{padding:1rem 1.5rem;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end}
 .btn-cancel{padding:9px 20px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg);font-size:14px;cursor:pointer;font-family:'DM Sans',sans-serif;color:var(--muted)}
 .btn-cancel:hover{border-color:var(--border-strong);color:var(--ink)}
@@ -155,8 +105,21 @@ tr:hover td{background:#FAFAF8}
 .btn-save:hover{background:var(--red-mid)}
 .btn-save:disabled{opacity:0.6;cursor:not-allowed}
 
-/* ── TOAST ── */
-#toast{position:fixed;bottom:2rem;right:2rem;z-index:999;background:#1A1A1A;color:#fff;padding:12px 20px;border-radius:var(--radius-sm);font-size:14px;opacity:0;transform:translateY(8px);transition:all 0.2s;pointer-events:none}
+/* PHOTO UPLOAD */
+.photo-upload-area{grid-column:1/-1;border:2px dashed var(--border);border-radius:var(--radius-sm);padding:1.25rem;text-align:center;cursor:pointer;transition:border-color 0.15s;position:relative}
+.photo-upload-area:hover,.photo-upload-area.dragover{border-color:var(--red)}
+.photo-upload-area input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.upload-hint{font-size:13px;color:var(--muted)}<br>
+.upload-hint strong{color:var(--red)}
+.upload-progress{font-size:12px;color:var(--hint);margin-top:6px;display:none}
+.photos-preview{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.preview-item{position:relative;width:80px;height:80px;border-radius:var(--radius-sm);overflow:hidden;border:1px solid var(--border)}
+.preview-item img{width:100%;height:100%;object-fit:cover}
+.preview-remove{position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,0.6);color:#fff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;line-height:1}
+.preview-item.uploading::after{content:'';position:absolute;inset:0;background:rgba(255,255,255,0.6)}
+
+/* TOAST */
+#toast{position:fixed;bottom:1.5rem;right:1.5rem;z-index:999;background:#1A1A1A;color:#fff;padding:12px 20px;border-radius:var(--radius-sm);font-size:14px;opacity:0;transform:translateY(8px);transition:all 0.2s;pointer-events:none;max-width:300px}
 #toast.show{opacity:1;transform:translateY(0)}
 #toast.success{background:var(--green)}
 #toast.error{background:var(--red)}
@@ -170,40 +133,25 @@ tr:hover td{background:#FAFAF8}
     <div class="login-logo">🗺 Taiwan Travel</div>
     <div class="login-sub">Admin Portal — Authorised Access Only</div>
     <div class="login-error" id="loginError"></div>
-
-    <div class="field">
-      <label>Email</label>
-      <input type="email" id="loginEmail" placeholder="admin@example.com" />
-    </div>
-    <div class="field">
-      <label>Password</label>
-      <input type="password" id="loginPass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()" />
-    </div>
+    <div class="field"><label>Email</label><input type="email" id="loginEmail" placeholder="admin@example.com"/></div>
+    <div class="field"><label>Password</label><input type="password" id="loginPass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"/></div>
     <button class="btn-primary" id="loginBtn" onclick="doLogin()">Sign In</button>
-
     <div class="divider">or</div>
-
     <button class="btn-google" id="googleBtn" onclick="doGoogleLogin()">
-      <svg class="google-icon" viewBox="0 0 48 48">
-        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.35-8.16 2.35-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-      </svg>
+      <svg class="google-icon" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.35-8.16 2.35-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
       Continue with Google
     </button>
   </div>
 </div>
 
-<!-- ADMIN SHELL -->
+<!-- ADMIN -->
 <div id="adminShell">
   <div class="topbar">
-    <div class="topbar-title">🗺 Taiwan Travel — Admin</div>
+    <div class="topbar-title">🗺 Admin</div>
     <span class="topbar-user" id="topbarUser"></span>
     <button class="btn-sm" onclick="location.href='index.html'">View Site</button>
     <button class="btn-sm danger" onclick="doLogout()">Sign Out</button>
   </div>
-
   <div class="admin-body">
     <div class="stats-bar">
       <div class="stat-card"><div class="stat-label">Total Places</div><div class="stat-val" id="statTotal">—</div></div>
@@ -211,29 +159,20 @@ tr:hover td{background:#FAFAF8}
       <div class="stat-card"><div class="stat-label">Metro Stations</div><div class="stat-val" id="statStations">—</div></div>
       <div class="stat-card"><div class="stat-label">Categories</div><div class="stat-val" id="statCats">—</div></div>
     </div>
-
     <div class="action-row">
       <h2>All Places</h2>
       <button class="btn-add" onclick="openModal()">
-        <svg fill="none" viewBox="0 0 24 24" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-        Add Place
+        <svg fill="none" viewBox="0 0 24 24" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Add Place
       </button>
     </div>
-
     <div class="table-wrap">
       <div class="admin-search">
         <svg fill="none" viewBox="0 0 24 24" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-        <input type="text" id="adminSearch" placeholder="Search places…" oninput="renderTable()" />
+        <input type="text" id="adminSearch" placeholder="Search…" oninput="renderTable()"/>
       </div>
       <table>
-        <thead>
-          <tr>
-            <th>Name</th><th>Metro Station</th><th>District</th><th>Category</th><th>Price</th><th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="placesTableBody">
-          <tr class="empty-row"><td colspan="6">Loading…</td></tr>
-        </tbody>
+        <thead><tr><th>Name</th><th>Photos</th><th>Metro Station</th><th>Line</th><th>Category</th><th>Price</th><th>Actions</th></tr></thead>
+        <tbody id="placesTableBody"><tr class="empty-row"><td colspan="7">Loading…</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -241,17 +180,17 @@ tr:hover td{background:#FAFAF8}
 
 <!-- MODAL -->
 <div id="modalBackdrop" onclick="backdropClick(event)">
-  <div class="modal" id="modalBox">
+  <div class="modal">
     <div class="modal-head">
       <h3 id="modalTitle">Add Place</h3>
-      <button class="close-btn" onclick="closeModal()">
-        <svg fill="none" viewBox="0 0 24 24" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
-      </button>
+      <button class="close-btn" onclick="closeModal()"><svg fill="none" viewBox="0 0 24 24" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
     </div>
     <div class="modal-body">
-      <input type="hidden" id="editId" />
-      <div class="field full"><label>English Name *</label><input type="text" id="fName" placeholder="e.g. Jiufen Old Street" /></div>
-      <div class="field"><label>Chinese Name</label><input type="text" id="fNameZh" placeholder="e.g. 九份老街" /></div>
+      <input type="hidden" id="editId"/>
+
+      <!-- Basic Info -->
+      <div class="field full"><label>English Name *</label><input type="text" id="fName" placeholder="e.g. Jiufen Old Street"/></div>
+      <div class="field"><label>Chinese Name</label><input type="text" id="fNameZh" placeholder="e.g. 九份老街"/></div>
       <div class="field"><label>Category *</label>
         <select id="fCategory">
           <option value="">— Select —</option>
@@ -267,15 +206,46 @@ tr:hover td{background:#FAFAF8}
           <option value="entertainment">🎡 Entertainment</option>
         </select>
       </div>
-      <div class="field"><label>Metro Station *</label><input type="text" id="fMetroStation" placeholder="e.g. Jiantan Station" /></div>
-      <div class="field full"><label>Metro / Transport Access</label><input type="text" id="fMetroAccess" placeholder="e.g. Red Line, 3 min walk from Exit 1" /></div>
-      <div class="field"><label>District</label><input type="text" id="fDistrict" placeholder="e.g. Shilin, Taipei" /></div>
-      <div class="field"><label>Ticket Price (NT$, 0 = Free)</label><input type="number" id="fPrice" placeholder="0" min="0" /></div>
-      <div class="field full"><label>Nearby Areas (comma-separated)</label><input type="text" id="fNearby" placeholder="e.g. Tianmu, National Palace Museum, Danshui" /></div>
+      <div class="field"><label>District</label><input type="text" id="fDistrict" placeholder="e.g. Shilin, Taipei"/></div>
+      <div class="field"><label>Ticket Price (NT$, 0 = Free)</label><input type="number" id="fPrice" placeholder="0" min="0"/></div>
+
+      <!-- Transport -->
+      <div class="section-title">🚇 Transport</div>
+      <div class="field"><label>Metro Station *</label><input type="text" id="fMetroStation" placeholder="e.g. Jiantan Station"/></div>
+      <div class="field"><label>Metro Line</label><input type="text" id="fMetroLine" placeholder="e.g. Red Line"/></div>
+      <div class="field full"><label>Walk from Exit</label><input type="text" id="fWalkTime" placeholder="e.g. 3 min from Exit 1"/></div>
+      <div class="field"><label>Transfer Type</label>
+        <select id="fTransferType">
+          <option value="">None</option>
+          <option value="🚌 Bus">🚌 Bus</option>
+          <option value="🚕 Taxi">🚕 Taxi</option>
+          <option value="🚲 Bike">🚲 Bike</option>
+          <option value="🚶 Walk">🚶 Walk</option>
+          <option value="⛴ Ferry">⛴ Ferry</option>
+        </select>
+      </div>
+      <div class="field"><label>Transfer Time</label><input type="text" id="fTransferTime" placeholder="e.g. 20 min"/></div>
+      <div class="field full"><label>Transfer Detail</label><input type="text" id="fTransferDetail" placeholder="e.g. Bus 1062 from Ruifang Station"/></div>
+
+      <!-- Nearby & Description -->
+      <div class="section-title">📍 Details</div>
+      <div class="field full"><label>Nearby Areas (comma-separated)</label><input type="text" id="fNearby" placeholder="e.g. Jinguashi, Shifen, Keelung"/></div>
       <div class="field full"><label>Description</label><textarea id="fDesc" rows="3" placeholder="Short description for visitors…"></textarea></div>
-      <div class="field full"><label>Image URL</label><input type="url" id="fImageUrl" placeholder="https://..." /></div>
-      <div class="field full"><label>Emoji (fallback if no image)</label><input type="text" id="fEmoji" placeholder="e.g. 🏮" maxlength="4" /></div>
-      <div class="field full"><label>Google Maps URL</label><input type="url" id="fMapUrl" placeholder="https://maps.google.com/?q=..." /></div>
+      <div class="field"><label>Emoji (fallback)</label><input type="text" id="fEmoji" placeholder="🏮" maxlength="4"/></div>
+      <div class="field"><label>Google Maps URL</label><input type="url" id="fMapUrl" placeholder="https://maps.google.com/?q=…"/></div>
+
+      <!-- Photos -->
+      <div class="section-title">📸 Photos (up to 5)</div>
+      <div class="photo-upload-area full" id="uploadArea">
+        <input type="file" id="photoInput" accept="image/*" multiple onchange="handleFiles(this.files)"/>
+        <div class="upload-hint">
+          <svg style="width:24px;height:24px;stroke:var(--hint);margin:0 auto 8px;display:block" fill="none" viewBox="0 0 24 24" stroke-width="1.5"><path d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"/></svg>
+          <strong>Click or drag photos here</strong><br>
+          <span style="font-size:12px">Auto-compressed before upload · Max 5 photos</span>
+        </div>
+        <div class="upload-progress" id="uploadProgress">Uploading…</div>
+      </div>
+      <div class="photos-preview full" id="photosPreview"></div>
     </div>
     <div class="modal-footer">
       <button class="btn-cancel" onclick="closeModal()">Cancel</button>
@@ -288,103 +258,83 @@ tr:hover td{background:#FAFAF8}
 
 <script src="firebase-config.js"></script>
 <script type="module">
-import { initializeApp }                                      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { initializeApp }                                   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, signOut,
          onAuthStateChanged, GoogleAuthProvider,
-         signInWithPopup }                                    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+         signInWithPopup }                                 from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getDatabase, ref, onValue,
-         push, remove, update }                               from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+         push, remove, update }                            from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const CLOUDINARY_CLOUD = 'daq6xfmln';
+const CLOUDINARY_PRESET = 'taiwan-travel';
 
 const app      = initializeApp(FIREBASE_CONFIG);
 const auth     = getAuth(app);
 const db       = getDatabase(app);
 const provider = new GoogleAuthProvider();
 
-let allPlaces = [];
+let allPlaces=[], currentPhotos=[];
 
-// ── AUTH STATE ──
-onAuthStateChanged(auth, user => {
-  if (user) {
-    document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('adminShell').style.display  = 'block';
-    document.getElementById('topbarUser').textContent    = user.displayName || user.email;
+// ── AUTH ──
+onAuthStateChanged(auth,user=>{
+  if(user){
+    document.getElementById('loginScreen').style.display='none';
+    document.getElementById('adminShell').style.display='block';
+    document.getElementById('topbarUser').textContent=user.displayName||user.email;
     listenPlaces();
   } else {
-    document.getElementById('loginScreen').style.display = 'flex';
-    document.getElementById('adminShell').style.display  = 'none';
+    document.getElementById('loginScreen').style.display='flex';
+    document.getElementById('adminShell').style.display='none';
   }
 });
 
-// ── EMAIL LOGIN ──
-window.doLogin = async function() {
-  const email = document.getElementById('loginEmail').value.trim();
-  const pass  = document.getElementById('loginPass').value;
-  const btn   = document.getElementById('loginBtn');
-  const err   = document.getElementById('loginError');
-  err.style.display = 'none';
-  btn.disabled = true; btn.textContent = 'Signing in…';
-  try {
-    await signInWithEmailAndPassword(auth, email, pass);
-  } catch(e) {
-    err.textContent = 'Invalid email or password. Please try again.';
-    err.style.display = 'block';
-    btn.disabled = false; btn.textContent = 'Sign In';
-  }
+window.doLogin=async function(){
+  const email=document.getElementById('loginEmail').value.trim();
+  const pass=document.getElementById('loginPass').value;
+  const btn=document.getElementById('loginBtn'),err=document.getElementById('loginError');
+  err.style.display='none'; btn.disabled=true; btn.textContent='Signing in…';
+  try{ await signInWithEmailAndPassword(auth,email,pass); }
+  catch(e){ err.textContent='Invalid email or password.'; err.style.display='block'; btn.disabled=false; btn.textContent='Sign In'; }
 };
 
-// ── GOOGLE LOGIN ──
-window.doGoogleLogin = async function() {
-  const btn = document.getElementById('googleBtn');
-  const err = document.getElementById('loginError');
-  err.style.display = 'none';
-  btn.disabled = true; btn.textContent = 'Signing in…';
-  try {
-    await signInWithPopup(auth, provider);
-  } catch(e) {
-    err.textContent = 'Google sign-in failed. Please try again.';
-    err.style.display = 'block';
-    btn.disabled = false;
-    btn.innerHTML = `<svg class="google-icon" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.35-8.16 2.35-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>Continue with Google`;
-  }
+window.doGoogleLogin=async function(){
+  const btn=document.getElementById('googleBtn'),err=document.getElementById('loginError');
+  err.style.display='none'; btn.disabled=true;
+  try{ await signInWithPopup(auth,provider); }
+  catch(e){ err.textContent='Google sign-in failed.'; err.style.display='block'; btn.disabled=false; }
 };
 
-// ── LOGOUT ──
-window.doLogout = async function() { await signOut(auth); };
+window.doLogout=async function(){ await signOut(auth); };
 
 // ── DATA ──
-function listenPlaces() {
-  onValue(ref(db, 'places'), snap => {
-    const data = snap.val();
-    allPlaces = data ? Object.entries(data).map(([id,v]) => ({id,...v})) : [];
-    updateStats();
-    renderTable();
+function listenPlaces(){
+  onValue(ref(db,'places'),snap=>{
+    const data=snap.val();
+    allPlaces=data?Object.entries(data).map(([id,v])=>({id,...v})):[];
+    updateStats(); renderTable();
   });
 }
-
-function updateStats() {
-  document.getElementById('statTotal').textContent    = allPlaces.length;
-  document.getElementById('statFree').textContent     = allPlaces.filter(p => !p.price || p.price==0).length;
-  document.getElementById('statStations').textContent = new Set(allPlaces.map(p=>p.metroStation).filter(Boolean)).size;
-  document.getElementById('statCats').textContent     = new Set(allPlaces.map(p=>p.category).filter(Boolean)).size;
+function updateStats(){
+  document.getElementById('statTotal').textContent=allPlaces.length;
+  document.getElementById('statFree').textContent=allPlaces.filter(p=>!p.price||p.price==0).length;
+  document.getElementById('statStations').textContent=new Set(allPlaces.map(p=>p.metroStation).filter(Boolean)).size;
+  document.getElementById('statCats').textContent=new Set(allPlaces.map(p=>p.category).filter(Boolean)).size;
 }
 
-window.renderTable = function() {
-  const q = (document.getElementById('adminSearch').value||'').toLowerCase();
-  const list = allPlaces.filter(p =>
-    !q || [p.name,p.nameZh,p.metroStation,p.district,p.category]
-      .some(f => f && f.toLowerCase().includes(q))
-  );
-  const tbody = document.getElementById('placesTableBody');
-  if (!list.length) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="6">No places found.</td></tr>';
-    return;
-  }
-  tbody.innerHTML = list.map(p => {
-    const isFree = !p.price || p.price==0;
+window.renderTable=function(){
+  const q=(document.getElementById('adminSearch').value||'').toLowerCase();
+  const list=allPlaces.filter(p=>!q||[p.name,p.nameZh,p.metroStation,p.metroLine,p.district,p.category].some(f=>f&&f.toLowerCase().includes(q)));
+  const tbody=document.getElementById('placesTableBody');
+  if(!list.length){ tbody.innerHTML='<tr class="empty-row"><td colspan="7">No places found.</td></tr>'; return; }
+  tbody.innerHTML=list.map(p=>{
+    const isFree=!p.price||p.price==0;
+    const photos=p.photos&&p.photos.length?p.photos:[];
+    const thumbHTML=photos.length?`<img class="photo-thumb" src="${esc(photos[0])}" alt=""/><span class="photo-count">${photos.length>1?'+'+( photos.length-1):''}</span>`:`<span style="color:var(--hint);font-size:12px">—</span>`;
     return `<tr>
       <td class="td-name">${esc(p.name)}${p.nameZh?`<br><small style="color:var(--hint);font-weight:400">${esc(p.nameZh)}</small>`:''}</td>
-      <td><div class="td-metro"><div class="metro-dot"></div>${esc(p.metroStation||'—')}</div></td>
-      <td>${esc(p.district||'—')}</td>
+      <td><div style="display:flex;align-items:center;gap:4px">${thumbHTML}</div></td>
+      <td><div class="td-metro"><div class="metro-dot-sm"></div>${esc(p.metroStation||'—')}</div></td>
+      <td>${esc(p.metroLine||'—')}</td>
       <td><span class="cat-pill">${esc(p.category||'—')}</span></td>
       <td class="td-price ${isFree?'free':''}">${isFree?'Free':'NT$'+p.price}</td>
       <td><div class="td-actions">
@@ -396,69 +346,146 @@ window.renderTable = function() {
 };
 
 // ── MODAL ──
-window.openModal = function() {
-  document.getElementById('modalTitle').textContent = 'Add New Place';
-  document.getElementById('editId').value = '';
-  ['fName','fNameZh','fCategory','fMetroStation','fMetroAccess',
-   'fDistrict','fPrice','fNearby','fDesc','fImageUrl','fEmoji','fMapUrl']
-    .forEach(id => { document.getElementById(id).value=''; });
+window.openModal=function(){
+  document.getElementById('modalTitle').textContent='Add New Place';
+  document.getElementById('editId').value='';
+  ['fName','fNameZh','fCategory','fMetroStation','fMetroLine','fWalkTime',
+   'fTransferType','fTransferTime','fTransferDetail','fDistrict','fPrice',
+   'fNearby','fDesc','fEmoji','fMapUrl'].forEach(id=>{ document.getElementById(id).value=''; });
+  currentPhotos=[];
+  renderPhotoPreviews();
   document.getElementById('modalBackdrop').classList.add('open');
 };
 
-window.editPlace = function(id) {
-  const p = allPlaces.find(x=>x.id===id); if(!p) return;
-  document.getElementById('modalTitle').textContent = 'Edit Place';
-  document.getElementById('editId').value        = id;
-  document.getElementById('fName').value         = p.name||'';
-  document.getElementById('fNameZh').value       = p.nameZh||'';
-  document.getElementById('fCategory').value     = p.category||'';
-  document.getElementById('fMetroStation').value = p.metroStation||'';
-  document.getElementById('fMetroAccess').value  = p.metroAccess||'';
-  document.getElementById('fDistrict').value     = p.district||'';
-  document.getElementById('fPrice').value        = p.price||0;
-  document.getElementById('fNearby').value       = (p.nearby||[]).join(', ');
-  document.getElementById('fDesc').value         = p.desc||'';
-  document.getElementById('fImageUrl').value     = p.imageUrl||'';
-  document.getElementById('fEmoji').value        = p.emoji||'';
-  document.getElementById('fMapUrl').value       = p.mapUrl||'';
+window.editPlace=function(id){
+  const p=allPlaces.find(x=>x.id===id); if(!p)return;
+  document.getElementById('modalTitle').textContent='Edit Place';
+  document.getElementById('editId').value=id;
+  document.getElementById('fName').value=p.name||'';
+  document.getElementById('fNameZh').value=p.nameZh||'';
+  document.getElementById('fCategory').value=p.category||'';
+  document.getElementById('fMetroStation').value=p.metroStation||'';
+  document.getElementById('fMetroLine').value=p.metroLine||'';
+  document.getElementById('fWalkTime').value=p.walkTime||'';
+  document.getElementById('fTransferType').value=p.transferType||'';
+  document.getElementById('fTransferTime').value=p.transferTime||'';
+  document.getElementById('fTransferDetail').value=p.transferDetail||'';
+  document.getElementById('fDistrict').value=p.district||'';
+  document.getElementById('fPrice').value=p.price||0;
+  document.getElementById('fNearby').value=(p.nearby||[]).join(', ');
+  document.getElementById('fDesc').value=p.desc||'';
+  document.getElementById('fEmoji').value=p.emoji||'';
+  document.getElementById('fMapUrl').value=p.mapUrl||'';
+  currentPhotos=[...(p.photos||[])];
+  renderPhotoPreviews();
   document.getElementById('modalBackdrop').classList.add('open');
 };
 
-window.closeModal = function() { document.getElementById('modalBackdrop').classList.remove('open'); };
-window.backdropClick = function(e) { if(e.target===document.getElementById('modalBackdrop')) closeModal(); };
+window.closeModal=function(){ document.getElementById('modalBackdrop').classList.remove('open'); };
+window.backdropClick=function(e){ if(e.target===document.getElementById('modalBackdrop'))closeModal(); };
 
-window.savePlace = async function() {
-  const name = document.getElementById('fName').value.trim();
-  const cat  = document.getElementById('fCategory').value;
-  const mrt  = document.getElementById('fMetroStation').value.trim();
-  if(!name||!cat||!mrt){ showToast('Please fill in Name, Category, and Metro Station.','error'); return; }
-  const btn = document.getElementById('saveBtn');
+// ── PHOTO UPLOAD ──
+window.handleFiles=async function(files){
+  const remaining=5-currentPhotos.length;
+  if(remaining<=0){ showToast('Maximum 5 photos reached.','error'); return; }
+  const toUpload=Array.from(files).slice(0,remaining);
+  const prog=document.getElementById('uploadProgress');
+  prog.style.display='block'; prog.textContent=`Uploading 0 / ${toUpload.length}…`;
+
+  for(let i=0;i<toUpload.length;i++){
+    prog.textContent=`Uploading ${i+1} / ${toUpload.length}…`;
+    try{
+      const compressed=await compressImage(toUpload[i],1200,0.8);
+      const url=await uploadToCloudinary(compressed);
+      currentPhotos.push(url);
+      renderPhotoPreviews();
+    } catch(e){ showToast('Upload failed: '+e.message,'error'); }
+  }
+  prog.style.display='none';
+  document.getElementById('photoInput').value='';
+};
+
+async function compressImage(file,maxPx,quality){
+  return new Promise((resolve,reject)=>{
+    const img=new Image(), reader=new FileReader();
+    reader.onload=e=>{ img.src=e.target.result; };
+    img.onload=()=>{
+      let{width:w,height:h}=img;
+      if(w>maxPx||h>maxPx){ if(w>h){h=Math.round(h*maxPx/w);w=maxPx;}else{w=Math.round(w*maxPx/h);h=maxPx;} }
+      const canvas=document.createElement('canvas');
+      canvas.width=w; canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      canvas.toBlob(blob=>resolve(blob),'image/jpeg',quality);
+    };
+    img.onerror=reject;
+    reader.onerror=reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function uploadToCloudinary(blob){
+  const fd=new FormData();
+  fd.append('file',blob);
+  fd.append('upload_preset',CLOUDINARY_PRESET);
+  const res=await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`,{method:'POST',body:fd});
+  if(!res.ok)throw new Error('Cloudinary error '+res.status);
+  const data=await res.json();
+  return data.secure_url;
+}
+
+window.removePhoto=function(idx){
+  currentPhotos.splice(idx,1);
+  renderPhotoPreviews();
+};
+
+function renderPhotoPreviews(){
+  const wrap=document.getElementById('photosPreview');
+  wrap.innerHTML=currentPhotos.map((url,i)=>`
+    <div class="preview-item">
+      <img src="${esc(url)}" alt="photo ${i+1}"/>
+      <button class="preview-remove" onclick="removePhoto(${i})" title="Remove">✕</button>
+    </div>`).join('');
+  const area=document.getElementById('uploadArea');
+  area.style.display=currentPhotos.length>=5?'none':'block';
+}
+
+// ── SAVE ──
+window.savePlace=async function(){
+  const name=document.getElementById('fName').value.trim();
+  const cat=document.getElementById('fCategory').value;
+  const mrt=document.getElementById('fMetroStation').value.trim();
+  if(!name||!cat||!mrt){ showToast('Name, Category, and Metro Station are required.','error'); return; }
+  const btn=document.getElementById('saveBtn');
   btn.disabled=true; btn.textContent='Saving…';
-  const data = {
-    name, nameZh: document.getElementById('fNameZh').value.trim(),
-    category: cat, metroStation: mrt,
-    metroAccess: document.getElementById('fMetroAccess').value.trim(),
-    district: document.getElementById('fDistrict').value.trim(),
-    price: parseInt(document.getElementById('fPrice').value)||0,
-    nearby: document.getElementById('fNearby').value.split(',').map(s=>s.trim()).filter(Boolean),
-    desc: document.getElementById('fDesc').value.trim(),
-    imageUrl: document.getElementById('fImageUrl').value.trim(),
-    emoji: document.getElementById('fEmoji').value.trim(),
-    mapUrl: document.getElementById('fMapUrl').value.trim(),
-    updatedAt: Date.now(),
+  const data={
+    name, nameZh:document.getElementById('fNameZh').value.trim(),
+    category:cat, metroStation:mrt,
+    metroLine:document.getElementById('fMetroLine').value.trim(),
+    walkTime:document.getElementById('fWalkTime').value.trim(),
+    transferType:document.getElementById('fTransferType').value,
+    transferTime:document.getElementById('fTransferTime').value.trim(),
+    transferDetail:document.getElementById('fTransferDetail').value.trim(),
+    district:document.getElementById('fDistrict').value.trim(),
+    price:parseInt(document.getElementById('fPrice').value)||0,
+    nearby:document.getElementById('fNearby').value.split(',').map(s=>s.trim()).filter(Boolean),
+    desc:document.getElementById('fDesc').value.trim(),
+    emoji:document.getElementById('fEmoji').value.trim(),
+    mapUrl:document.getElementById('fMapUrl').value.trim(),
+    photos:currentPhotos,
+    updatedAt:Date.now(),
   };
-  try {
-    const id = document.getElementById('editId').value;
-    if(id){ await update(ref(db,'places/'+id), data); showToast('Place updated!','success'); }
+  try{
+    const id=document.getElementById('editId').value;
+    if(id){ await update(ref(db,'places/'+id),data); showToast('Place updated!','success'); }
     else { data.createdAt=Date.now(); await push(ref(db,'places'),data); showToast('Place added!','success'); }
     closeModal();
   } catch(e){ showToast('Error: '+e.message,'error'); }
   btn.disabled=false; btn.textContent='Save Place';
 };
 
-window.deletePlace = async function(id, name) {
-  if(!confirm(`Delete "${name}"? This cannot be undone.`)) return;
-  try { await remove(ref(db,'places/'+id)); showToast('Place deleted.','success'); }
+window.deletePlace=async function(id,name){
+  if(!confirm(`Delete "${name}"? This cannot be undone.`))return;
+  try{ await remove(ref(db,'places/'+id)); showToast('Deleted.','success'); }
   catch(e){ showToast('Error: '+e.message,'error'); }
 };
 
@@ -468,7 +495,7 @@ let toastTimer;
 function showToast(msg,type=''){
   const t=document.getElementById('toast');
   t.textContent=msg; t.className='show'+(type?' '+type:'');
-  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.className='',3000);
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.className='',3500);
 }
 </script>
 </body>
