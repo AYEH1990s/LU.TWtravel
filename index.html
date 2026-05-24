@@ -298,7 +298,7 @@ function cardHTML(p){
       const m=photoMeta[i]||{};
       const ox=parseFloat(m.ox)||50;
       const oy=parseFloat(m.oy)||50;
-      const zoom=Math.max(1,parseFloat(m.zoom)||1);
+      const zoom=Math.max(0.5,parseFloat(m.zoom)||1);
       const bgSize=zoom*100+'%';
       return `<div class="carousel-slide">
         <div style="position:absolute;inset:0;background-image:url('${esc(url)}');background-size:${bgSize};background-position:${ox}% ${oy}%;background-repeat:no-repeat;cursor:zoom-in"

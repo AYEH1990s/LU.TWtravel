@@ -125,16 +125,10 @@ tr:hover td{background:#FAFAF8}
   font-weight:500;background:var(--surface);border-bottom:1px solid var(--border);
 }
 .preview-stage{
-  width:100%;position:relative;overflow:hidden;
-  cursor:grab;user-select:none;aspect-ratio:16/9;background:#111;
+  width:100%;position:relative;cursor:grab;user-select:none;background:#111;
 }
 .preview-stage:active{cursor:grabbing}
-.preview-bg{
-  position:absolute;inset:0;
-  background-repeat:no-repeat;
-  background-size:cover;
-  pointer-events:none;
-}
+.preview-stage canvas{display:block;width:100%;height:auto;}
 .preview-controls{
   padding:10px 12px;display:flex;flex-direction:column;gap:8px;
   background:var(--card);border-top:1px solid var(--border);
@@ -477,100 +471,119 @@ function renderPhotoPreviews(){
   const wrap=document.getElementById('photosPreview');
   wrap.innerHTML=currentPhotos.map((url,i)=>{
     const m=currentPhotoMeta[i]||{zoom:1,ox:50,oy:50};
-    const zoom=Math.max(1,parseFloat(m.zoom)||1);
-    const bgSize=`${zoom*100}%`;
+    const zoom=parseFloat(m.zoom)||1;
     return `<div class="preview-item">
       <div class="preview-num">Photo ${i+1} of ${currentPhotos.length}</div>
       <div class="preview-stage" id="stage-${i}">
-        <div class="preview-bg" id="pbg-${i}"
-          style="background-image:url('${esc(url)}');background-size:${bgSize};background-position:${ox}% ${oy}%"></div>
+        <canvas id="canvas-${i}" style="display:block;width:100%;cursor:grab"></canvas>
       </div>
       <div class="preview-controls">
         <div class="zoom-row">
           <svg style="width:14px;height:14px;stroke:var(--muted);flex-shrink:0" fill="none" viewBox="0 0 24 24" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M8 11h6"/></svg>
-          <input type="range" min="1.0" max="3.0" step="0.1" value="${Math.max(1,zoom).toFixed(1)}" id="zslider-${i}"
+          <input type="range" min="0.5" max="2.0" step="0.05" value="${zoom.toFixed(2)}" id="zslider-${i}"
             oninput="updateZoom(${i},this.value)" style="flex:1"/>
           <svg style="width:14px;height:14px;stroke:var(--muted);flex-shrink:0" fill="none" viewBox="0 0 24 24" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M8 11h6M11 8v6"/></svg>
           <span class="zoom-val" id="zlabel-${i}">${zoom.toFixed(1)}x</span>
         </div>
         <div class="preview-actions">
-          <span class="preview-hint-txt" id="hint-${i}">Drag to reposition · ${ox.toFixed(0)}% ${oy.toFixed(0)}%</span>
+          <span class="preview-hint-txt" id="hint-${i}">Drag to reposition · bright area = card thumbnail</span>
           <button class="preview-remove" onclick="removePhoto(${i})">Remove</button>
         </div>
       </div>
     </div>`;
   }).join('');
   document.getElementById('uploadArea').style.display=currentPhotos.length>=5?'none':'block';
-  currentPhotos.forEach((_,i)=>bindStageDrag(i));
+  currentPhotos.forEach((url,i)=>loadAndDraw(url,i));
+}
+
+const CROP_AR=16/9;
+const loadedImgs={};
+
+function loadAndDraw(url,idx){
+  if(loadedImgs[idx]){drawCanvas(idx);bindDrag(idx);return;}
+  const img=new Image();
+  img.crossOrigin='anonymous';
+  img.onload=()=>{loadedImgs[idx]=img;drawCanvas(idx);bindDrag(idx);};
+  img.onerror=()=>{const img2=new Image();img2.onload=()=>{loadedImgs[idx]=img2;drawCanvas(idx);bindDrag(idx);};img2.src=url;};
+  img.src=url;
+}
+
+function drawCanvas(idx){
+  const canvas=document.getElementById('canvas-'+idx);
+  const img=loadedImgs[idx];
+  if(!canvas||!img)return;
+  const SW=canvas.parentElement.offsetWidth||560;
+  const imgAR=img.naturalWidth/img.naturalHeight;
+  const cropH=SW/CROP_AR;
+  const imgH=SW/imgAR;
+  const SH=Math.max(cropH,imgH);
+  canvas.width=SW; canvas.height=SH;
+  const ctx=canvas.getContext('2d');
+  const m=currentPhotoMeta[idx]||{zoom:1,ox:50,oy:50};
+  const zoom=Math.max(0.5,Math.min(2.0,parseFloat(m.zoom)||1));
+  const ox=Math.max(0,Math.min(100,parseFloat(m.ox)||50));
+  const oy=Math.max(0,Math.min(100,parseFloat(m.oy)||50));
+  const dw=SW*zoom, dh=(SW/imgAR)*zoom;
+  const dx=(SW-dw)*(ox/100);
+  const dy=(SH-dh)*(oy/100);
+  ctx.clearRect(0,0,SW,SH);
+  ctx.drawImage(img,dx,dy,dw,dh);
+  ctx.fillStyle='rgba(0,0,0,0.5)';
+  ctx.fillRect(0,0,SW,SH);
+  const cropTop=(SH-cropH)/2;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0,cropTop,SW,cropH);
+  ctx.clip();
+  ctx.drawImage(img,dx,dy,dw,dh);
+  ctx.restore();
+  ctx.strokeStyle='rgba(255,255,255,0.85)';
+  ctx.lineWidth=2;
+  ctx.strokeRect(1,cropTop+1,SW-2,cropH-2);
 }
 
 window.updateZoom=function(idx,val){
-  const zoom=Math.min(3.0,Math.max(1.0,parseFloat(val)));
+  const zoom=Math.max(0.5,Math.min(2.0,parseFloat(val)));
   if(!currentPhotoMeta[idx])currentPhotoMeta[idx]={zoom:1,ox:50,oy:50};
   currentPhotoMeta[idx].zoom=zoom;
-  applyBgStyle(idx);
+  drawCanvas(idx);
   const lbl=document.getElementById('zlabel-'+idx);
   if(lbl)lbl.textContent=zoom.toFixed(1)+'x';
 };
 
-function applyBgStyle(idx){
-  const bg=document.getElementById('pbg-'+idx);
-  if(!bg)return;
-  const m=currentPhotoMeta[idx]||{zoom:1,ox:50,oy:50};
-  const zoom=parseFloat(m.zoom)||1;
-  const ox=parseFloat(m.ox)||50;
-  const oy=parseFloat(m.oy)||50;
-  bg.style.backgroundSize=`${zoom*100}%`;
-  bg.style.backgroundPosition=`${ox}% ${oy}%`;
-  const hint=document.getElementById('hint-'+idx);
-  if(hint)hint.textContent=`Drag to reposition · ${ox.toFixed(0)}% ${oy.toFixed(0)}%`;
-}
-
-function bindStageDrag(idx){
-  const stage=document.getElementById('stage-'+idx);
-  if(!stage)return;
+function bindDrag(idx){
+  const canvas=document.getElementById('canvas-'+idx);
+  if(!canvas||canvas._dragBound)return;
+  canvas._dragBound=true;
   let dragging=false,lx=0,ly=0;
-  stage.addEventListener('mousedown',e=>{
-    e.preventDefault();dragging=true;lx=e.clientX;ly=e.clientY;
-    stage.style.cursor='grabbing';
-  });
-  window.addEventListener('mousemove',e=>{
-    if(!dragging)return;
-    moveDrag(idx,e.clientX-lx,e.clientY-ly);
-    lx=e.clientX;ly=e.clientY;
-  });
-  window.addEventListener('mouseup',()=>{if(dragging){dragging=false;stage.style.cursor='grab';}});
-  stage.addEventListener('touchstart',e=>{
-    e.preventDefault();dragging=true;
-    lx=e.touches[0].clientX;ly=e.touches[0].clientY;
-  },{passive:false});
-  stage.addEventListener('touchmove',e=>{
-    e.preventDefault();if(!dragging)return;
-    moveDrag(idx,e.touches[0].clientX-lx,e.touches[0].clientY-ly);
-    lx=e.touches[0].clientX;ly=e.touches[0].clientY;
-  },{passive:false});
-  stage.addEventListener('touchend',()=>{dragging=false;stage.style.cursor='grab';});
+  canvas.addEventListener('mousedown',e=>{e.preventDefault();dragging=true;lx=e.clientX;ly=e.clientY;canvas.style.cursor='grabbing';});
+  window.addEventListener('mousemove',e=>{if(!dragging)return;applyDrag(idx,e.clientX-lx,e.clientY-ly);lx=e.clientX;ly=e.clientY;});
+  window.addEventListener('mouseup',()=>{if(dragging){dragging=false;canvas.style.cursor='grab';}});
+  canvas.addEventListener('touchstart',e=>{e.preventDefault();dragging=true;lx=e.touches[0].clientX;ly=e.touches[0].clientY;},{passive:false});
+  canvas.addEventListener('touchmove',e=>{e.preventDefault();if(!dragging)return;applyDrag(idx,e.touches[0].clientX-lx,e.touches[0].clientY-ly);lx=e.touches[0].clientX;ly=e.touches[0].clientY;},{passive:false});
+  canvas.addEventListener('touchend',()=>{dragging=false;canvas.style.cursor='grab';});
 }
 
-function moveDrag(idx,dx,dy){
+function applyDrag(idx,dx,dy){
   if(!currentPhotoMeta[idx])currentPhotoMeta[idx]={zoom:1,ox:50,oy:50};
   const m=currentPhotoMeta[idx];
-  const stage=document.getElementById('stage-'+idx);
-  if(!stage)return;
-  const zoom=Math.max(1,parseFloat(m.zoom)||1);
-  const W=stage.offsetWidth||400;
-  const H=stage.offsetHeight||225;
-  // background-position % works on the "overflow" area
-  // overflow = (bgSize - containerSize), so 1px drag = 1/(overflow_px) * 100%
-  // bgSize in px = W * zoom, overflow = W*(zoom-1)
-  const overflowX=W*(zoom-1);
-  const overflowY=H*(zoom-1);
-  // avoid division by zero when no overflow (zoom=1)
-  const senX=overflowX>0 ? (100/overflowX) : 0;
-  const senY=overflowY>0 ? (100/overflowY) : 0;
+  const img=loadedImgs[idx];
+  if(!img)return;
+  const canvas=document.getElementById('canvas-'+idx);
+  const SW=canvas?canvas.width:560;
+  const zoom=parseFloat(m.zoom)||1;
+  const imgAR=img.naturalWidth/img.naturalHeight;
+  const dw=SW*zoom, dh=(SW/imgAR)*zoom;
+  const cropH=SW/CROP_AR;
+  const SH=Math.max(cropH,SW/imgAR);
+  // 1px drag moves anchor by 1/(dw-SW) in X and 1/(dh-SH) in Y (as fraction of 100)
+  const overX=Math.abs(dw-SW);
+  const overY=Math.abs(dh-SH);
+  const senX=overX>1?(100/overX):0;
+  const senY=overY>1?(100/overY):0;
   m.ox=Math.max(0,Math.min(100,(m.ox||50)-dx*senX));
   m.oy=Math.max(0,Math.min(100,(m.oy||50)-dy*senY));
-  applyBgStyle(idx);
+  drawCanvas(idx);
 }
 
 // ── SAVE ──
