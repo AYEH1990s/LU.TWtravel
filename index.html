@@ -296,13 +296,23 @@ function cardHTML(p){
   if(photos.length){
     slidesHTML=photos.map((url,i)=>{
       const m=photoMeta[i]||{};
-      const ox=parseFloat(m.ox)||50;
-      const oy=parseFloat(m.oy)||50;
+      const ox=parseFloat(m.ox)!=null?parseFloat(m.ox):50;
+      const oy=parseFloat(m.oy)!=null?parseFloat(m.oy):50;
       const zoom=Math.max(0.5,parseFloat(m.zoom)||1);
-      const bgSize=zoom*100+'%';
-      return `<div class="carousel-slide">
-        <div style="position:absolute;inset:0;background-image:url('${esc(url)}');background-size:${bgSize};background-position:${ox}% ${oy}%;background-repeat:no-repeat;cursor:zoom-in"
-          onclick="openLightbox(${JSON.stringify(photos).replace(/"/g,'&quot;')},${i})"></div>
+      // Mirror canvas formula exactly:
+      // dw = SW*zoom, dx = (SW-dw)*(ox/100) = SW*(1-zoom)*(ox/100)
+      // As % of container: left = (1-zoom)*(ox/100)*100% = (1-zoom)*ox %
+      // height: need to know image aspect ratio — use intrinsic via padding trick
+      // Simpler: use img with width=zoom*100%, left=(1-zoom)*ox%
+      // For height, same: top=(1-zoom/imgAR*containerAR)*oy% — but we don't know AR at render time
+      // Use JS onload to set top, default 0 until loaded
+      const leftPct=((1-zoom)*ox).toFixed(4);
+      const widthPct=(zoom*100).toFixed(4);
+      return `<div class="carousel-slide" style="overflow:hidden">
+        <img src="${esc(url)}" alt="${esc(p.name)}" loading="lazy"
+          style="position:absolute;width:${widthPct}%;height:auto;left:${leftPct}%;top:0;cursor:zoom-in"
+          onload="positionSlideImg(this,${zoom},${ox},${oy})"
+          onclick="openLightbox(${JSON.stringify(photos).replace(/"/g,'&quot;')},${i})"/>
       </div>`;
     }).join('');
   } else {
@@ -418,6 +428,26 @@ document.addEventListener('keydown',e=>{
 });
 
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+// Mirror canvas drawCanvas formula for front-end image positioning
+window.positionSlideImg=function(img,zoom,ox,oy){
+  const slide=img.parentElement;
+  if(!slide)return;
+  const SW=slide.offsetWidth||slide.clientWidth||300;
+  const SH=slide.offsetHeight||slide.clientHeight||190;
+  const natW=img.naturalWidth,natH=img.naturalHeight;
+  if(!natW||!natH)return;
+  const imgAR=natW/natH;
+  const dw=SW*zoom;
+  const dh=(SW/imgAR)*zoom;
+  // Same formula as canvas: dx=(SW-dw)*(ox/100), dy=(SH-dh)*(oy/100)
+  const dx=(SW-dw)*(ox/100);
+  const dy=(SH-dh)*(oy/100);
+  img.style.width=dw+'px';
+  img.style.height=dh+'px';
+  img.style.left=dx+'px';
+  img.style.top=dy+'px';
+};
 
 onValue(ref(db,'places'),snap=>{
   const data=snap.val();

@@ -616,30 +616,27 @@ function applyDrag(idx,dx,dy){
   const dh=(SW/imgAR)*zoom;
   const cropH=SW/CROP_AR;
   const SH=Math.max(cropH,SW/imgAR);
-  // Range of anchor: ox=0 → dx_img=0, ox=100 → dx_img=(SW-dw)
-  // Total anchor range in pixels = |SW-dw|
-  // dragging right (dx>0) moves image right → anchor (dx_img) increases → ox increases when dw<SW, decreases when dw>SW
-  // Simplify: just use pixel-based offset stored directly, convert to % only for save
-  // Store tx/ty as pixel offsets from centre, clamp to valid range
-  if(m.tx===undefined){
-    // Convert existing ox/oy to tx/ty
-    m.tx=(SW-dw)*(m.ox/100)-(SW-dw)/2||0;
-    m.ty=(SH-dh)*(m.oy/100)-(SH-dh)/2||0;
+
+  // Initialise tx/ty from ox/oy using exact same formula as drawCanvas
+  if(m.tx===undefined||m.ty===undefined){
+    m.tx=(SW-dw)*((m.ox||50)/100);
+    m.ty=(SH-dh)*((m.oy||50)/100);
   }
+
+  // Accumulate pixel drag
   m.tx=(m.tx||0)+dx;
   m.ty=(m.ty||0)+dy;
-  // Clamp: image must stay within stage bounds
-  const minTx=Math.min(0,SW-dw);
-  const maxTx=Math.max(0,SW-dw);
-  const minTy=Math.min(0,SH-dh);
-  const maxTy=Math.max(0,SH-dh);
-  m.tx=Math.max(minTx,Math.min(maxTx,m.tx));
-  m.ty=Math.max(minTy,Math.min(maxTy,m.ty));
-  // Convert back to ox/oy % for storage and frontend use
+
+  // Clamp so image stays within stage
+  // tx range: [SW-dw, 0] when zoom>1 (dw>SW), [0, SW-dw] when zoom<1 (dw<SW)
+  m.tx=Math.max(Math.min(0,SW-dw), Math.min(Math.max(0,SW-dw), m.tx));
+  m.ty=Math.max(Math.min(0,SH-dh), Math.min(Math.max(0,SH-dh), m.ty));
+
+  // Convert tx/ty back to ox/oy for storage + front-end
   const rangeX=SW-dw;
   const rangeY=SH-dh;
-  m.ox=rangeX!==0?Math.max(0,Math.min(100,(m.tx/rangeX)*100)):50;
-  m.oy=rangeY!==0?Math.max(0,Math.min(100,(m.ty/rangeY)*100)):50;
+  m.ox=rangeX!==0 ? Math.max(0,Math.min(100,(m.tx/rangeX)*100)) : 50;
+  m.oy=rangeY!==0 ? Math.max(0,Math.min(100,(m.ty/rangeY)*100)) : 50;
 }
 
 // ── SAVE ──
