@@ -124,32 +124,14 @@ tr:hover td{background:#FAFAF8}
   padding:6px 12px;font-size:11px;color:var(--hint);
   font-weight:500;background:var(--surface);border-bottom:1px solid var(--border);
 }
-/* outer stage: shows full image, dimmed outside crop area */
 .preview-stage{
-  width:100%;position:relative;
-  background:#1a1a1a;overflow:hidden;
-  cursor:grab;user-select:none;
-  /* height set inline via aspect-ratio of original image */
+  width:100%;position:relative;overflow:hidden;
+  cursor:grab;user-select:none;aspect-ratio:16/9;background:#111;
 }
 .preview-stage:active{cursor:grabbing}
 .preview-stage img{
-  position:absolute;top:0;left:0;
-  /* width/height/transform set by JS */
-  pointer-events:none;display:block;
-  transform-origin:top left;
-}
-/* crop overlay — the bright window showing what front-end will see (16:9) */
-.crop-overlay{
-  position:absolute;pointer-events:none;
-  border:2px solid rgba(255,255,255,0.9);
-  box-shadow:0 0 0 9999px rgba(0,0,0,0.45);
-  z-index:2;
-}
-.crop-hint{
-  position:absolute;bottom:6px;left:50%;transform:translateX(-50%);
-  background:rgba(0,0,0,0.55);color:#fff;
-  font-size:10px;padding:2px 10px;border-radius:10px;
-  white-space:nowrap;z-index:3;pointer-events:none;
+  position:absolute;inset:0;width:100%;height:100%;
+  object-fit:cover;pointer-events:none;
 }
 .preview-controls{
   padding:10px 12px;display:flex;flex-direction:column;gap:8px;
@@ -494,161 +476,101 @@ function renderPhotoPreviews(){
   wrap.innerHTML=currentPhotos.map((url,i)=>{
     const m=currentPhotoMeta[i]||{zoom:1,ox:50,oy:50};
     const zoom=parseFloat(m.zoom)||1;
+    const ox=parseFloat(m.ox)||50;
+    const oy=parseFloat(m.oy)||50;
     return `<div class="preview-item">
       <div class="preview-num">Photo ${i+1} of ${currentPhotos.length}</div>
       <div class="preview-stage" id="stage-${i}">
-        <canvas id="canvas-${i}" style="display:block;width:100%;cursor:grab"></canvas>
-        <div class="crop-hint">Drag to reposition · Bright area = visible on site</div>
+        <img id="pimg-${i}" src="${esc(url)}" alt="" draggable="false"
+          style="object-position:${ox}% ${oy}%;transform:scale(${zoom});transform-origin:${ox}% ${oy}%"/>
       </div>
       <div class="preview-controls">
         <div class="zoom-row">
           <svg style="width:14px;height:14px;stroke:var(--muted);flex-shrink:0" fill="none" viewBox="0 0 24 24" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M8 11h6"/></svg>
-          <input type="range" min="0.5" max="2.0" step="0.05" value="${zoom.toFixed(2)}" id="zslider-${i}"
+          <input type="range" min="1.0" max="2.0" step="0.05" value="${zoom.toFixed(2)}" id="zslider-${i}"
             oninput="updateZoom(${i},this.value)" style="flex:1"/>
           <svg style="width:14px;height:14px;stroke:var(--muted);flex-shrink:0" fill="none" viewBox="0 0 24 24" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M8 11h6M11 8v6"/></svg>
           <span class="zoom-val" id="zlabel-${i}">${zoom.toFixed(1)}x</span>
         </div>
         <div class="preview-actions">
-          <span class="preview-hint-txt">Bright area = what visitors see on the card</span>
+          <span class="preview-hint-txt">Drag to reposition · ${ox.toFixed(0)}% ${oy.toFixed(0)}%</span>
           <button class="preview-remove" onclick="removePhoto(${i})">Remove</button>
         </div>
       </div>
     </div>`;
   }).join('');
   document.getElementById('uploadArea').style.display=currentPhotos.length>=5?'none':'block';
-
-  // load images and init canvases
-  currentPhotos.forEach((url,i)=>{
-    const img=new Image();
-    img.crossOrigin='anonymous';
-    img.onload=()=>{ editorImgs[i]=img; drawCanvas(i); bindCanvasDrag(i); };
-    img.src=url;
-  });
+  // bind drag to each stage
+  currentPhotos.forEach((_,i)=>bindStageDrag(i));
 }
 
-// store loaded image elements
-const editorImgs={};
-const CROP_AR=16/9; // crop aspect ratio shown on site
-
-function getCanvasSize(idx){
-  const canvas=document.getElementById('canvas-'+idx);
-  if(!canvas)return{cw:560,ch:315};
-  const cw=canvas.parentElement.offsetWidth||560;
-  const img=editorImgs[idx];
-  if(!img)return{cw,ch:Math.round(cw/CROP_AR)};
-  // stage height: show full image height OR crop height, whichever is bigger
-  const imgAR=img.naturalWidth/img.naturalHeight;
-  const imgDisplayH=cw/imgAR;
-  const cropH=cw/CROP_AR;
-  const ch=Math.max(imgDisplayH,cropH,180);
-  return{cw,ch};
-}
-
-function drawCanvas(idx){
-  const canvas=document.getElementById('canvas-'+idx);
-  const img=editorImgs[idx];
-  if(!canvas||!img)return;
-
-  const{cw,ch}=getCanvasSize(idx);
-  canvas.width=cw;
-  canvas.height=ch;
-
-  const ctx=canvas.getContext('2d');
-  const m=currentPhotoMeta[idx]||{zoom:1,ox:50,oy:50};
-  const zoom=Math.min(2.0,Math.max(0.5,parseFloat(m.zoom)||1));
-  const ox=parseFloat(m.ox)||50; // 0-100%
-  const oy=parseFloat(m.oy)||50;
-
-  // how large to draw the image (zoom=1 means fit full image in canvas width)
-  const baseW=cw;
-  const baseH=cw*(img.naturalHeight/img.naturalWidth);
-  const dw=baseW*zoom;
-  const dh=baseH*zoom;
-
-  // translate ox/oy % into pixel offset
-  // ox=50 → image centred; ox=0 → image shifted right (showing left part); ox=100 → shifted left
-  const extraW=Math.max(0,dw-cw);
-  const extraH=Math.max(0,dh-ch);
-  const dx=(cw-dw)/2 + (0.5-ox/100)*extraW*2;
-  const dy=(ch-dh)/2 + (0.5-oy/100)*extraH*2;
-
-  // draw dim overlay first
-  ctx.clearRect(0,0,cw,ch);
-  ctx.drawImage(img,dx,dy,dw,dh);
-
-  // dim everything
-  ctx.fillStyle='rgba(0,0,0,0.45)';
-  ctx.fillRect(0,0,cw,ch);
-
-  // crop rect (16:9 centred)
-  const cropH=cw/CROP_AR;
-  const cropY=(ch-cropH)/2;
-
-  // re-draw image clipped to crop rect (bright area)
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(0,cropY,cw,cropH);
-  ctx.clip();
-  ctx.drawImage(img,dx,dy,dw,dh);
-  ctx.restore();
-
-  // crop border
-  ctx.strokeStyle='rgba(255,255,255,0.85)';
-  ctx.lineWidth=2;
-  ctx.strokeRect(1,cropY+1,cw-2,cropH-2);
-}
-
-// zoom slider
 window.updateZoom=function(idx,val){
-  const zoom=Math.min(2.0,Math.max(0.5,parseFloat(val)));
+  const zoom=Math.min(2.0,Math.max(1.0,parseFloat(val)));
   if(!currentPhotoMeta[idx])currentPhotoMeta[idx]={zoom:1,ox:50,oy:50};
   currentPhotoMeta[idx].zoom=zoom;
-  drawCanvas(idx);
+  applyImgStyle(idx);
   const lbl=document.getElementById('zlabel-'+idx);
   if(lbl)lbl.textContent=zoom.toFixed(1)+'x';
 };
 
-// drag to reposition on canvas
-function bindCanvasDrag(idx){
-  const canvas=document.getElementById('canvas-'+idx);
-  if(!canvas)return;
+function applyImgStyle(idx){
+  const img=document.getElementById('pimg-'+idx);
+  if(!img)return;
+  const m=currentPhotoMeta[idx]||{zoom:1,ox:50,oy:50};
+  const zoom=parseFloat(m.zoom)||1;
+  const ox=parseFloat(m.ox)||50;
+  const oy=parseFloat(m.oy)||50;
+  img.style.objectPosition=`${ox}% ${oy}%`;
+  img.style.transform=`scale(${zoom})`;
+  img.style.transformOrigin=`${ox}% ${oy}%`;
+  // update hint label
+  const hint=document.querySelector(`#stage-${idx} ~ .preview-controls .preview-hint-txt`);
+  if(hint)hint.textContent=`Drag to reposition · ${ox.toFixed(0)}% ${oy.toFixed(0)}%`;
+}
 
-  let dragging=false,lastX=0,lastY=0;
+function bindStageDrag(idx){
+  const stage=document.getElementById('stage-'+idx);
+  if(!stage)return;
+  let dragging=false,lx=0,ly=0;
 
-  function onDown(cx,cy){
-    dragging=true; lastX=cx; lastY=cy;
-    canvas.style.cursor='grabbing';
-  }
-  function onMove(cx,cy){
+  stage.addEventListener('mousedown',e=>{
+    e.preventDefault();
+    dragging=true;lx=e.clientX;ly=e.clientY;
+    stage.style.cursor='grabbing';
+  });
+  window.addEventListener('mousemove',e=>{
     if(!dragging)return;
-    const dx=cx-lastX, dy=cy-lastY;
-    lastX=cx; lastY=cy;
-    const m=currentPhotoMeta[idx]||{zoom:1,ox:50,oy:50};
-    const img=editorImgs[idx];
-    const{cw,ch}=getCanvasSize(idx);
-    const zoom=parseFloat(m.zoom)||1;
-    const baseW=cw, baseH=cw*(img.naturalHeight/img.naturalWidth);
-    const dw=baseW*zoom, dh=baseH*zoom;
-    const extraW=Math.max(0,dw-cw);
-    const extraH=Math.max(0,dh-ch);
-    // sensitivity: pixels moved / extra pixels available → % change
-    const senX=extraW>0?50/extraW:0;
-    const senY=extraH>0?50/extraH:0;
-    const newOx=Math.max(0,Math.min(100,(parseFloat(m.ox)||50)-dx*senX));
-    const newOy=Math.max(0,Math.min(100,(parseFloat(m.oy)||50)-dy*senY));
-    currentPhotoMeta[idx].ox=newOx;
-    currentPhotoMeta[idx].oy=newOy;
-    drawCanvas(idx);
-  }
-  function onUp(){ dragging=false; canvas.style.cursor='grab'; }
+    moveDrag(idx,e.clientX-lx,e.clientY-ly);
+    lx=e.clientX;ly=e.clientY;
+  });
+  window.addEventListener('mouseup',()=>{
+    if(dragging){dragging=false;stage.style.cursor='grab';}
+  });
+  stage.addEventListener('touchstart',e=>{
+    e.preventDefault();
+    dragging=true;lx=e.touches[0].clientX;ly=e.touches[0].clientY;
+  },{passive:false});
+  stage.addEventListener('touchmove',e=>{
+    e.preventDefault();
+    if(!dragging)return;
+    moveDrag(idx,e.touches[0].clientX-lx,e.touches[0].clientY-ly);
+    lx=e.touches[0].clientX;ly=e.touches[0].clientY;
+  },{passive:false});
+  stage.addEventListener('touchend',()=>{dragging=false;});
+}
 
-  canvas.addEventListener('mousedown',e=>{e.preventDefault();onDown(e.clientX,e.clientY);});
-  window.addEventListener('mousemove',e=>{ if(dragging)onMove(e.clientX,e.clientY); });
-  window.addEventListener('mouseup',onUp);
-
-  canvas.addEventListener('touchstart',e=>{e.preventDefault();const t=e.touches[0];onDown(t.clientX,t.clientY);},{passive:false});
-  canvas.addEventListener('touchmove',e=>{e.preventDefault();const t=e.touches[0];onMove(t.clientX,t.clientY);},{passive:false});
-  canvas.addEventListener('touchend',onUp);
+function moveDrag(idx,dx,dy){
+  if(!currentPhotoMeta[idx])currentPhotoMeta[idx]={zoom:1,ox:50,oy:50};
+  const m=currentPhotoMeta[idx];
+  const stage=document.getElementById('stage-'+idx);
+  if(!stage)return;
+  const zoom=parseFloat(m.zoom)||1;
+  // sensitivity scaled by zoom: more zoom = more range to move
+  const senX=100/(stage.offsetWidth*zoom);
+  const senY=100/(stage.offsetHeight*zoom);
+  m.ox=Math.max(0,Math.min(100,(parseFloat(m.ox)||50)-dx*senX));
+  m.oy=Math.max(0,Math.min(100,(parseFloat(m.oy)||50)-dy*senY));
+  applyImgStyle(idx);
 }
 
 // ── SAVE ──
