@@ -130,7 +130,7 @@ tr:hover td{background:#FAFAF8}
 }
 .preview-stage:active{cursor:grabbing}
 .preview-stage img{
-  position:absolute;inset:0;width:100%;height:100%;
+  position:absolute;
   object-fit:cover;pointer-events:none;
 }
 .preview-controls{
@@ -482,7 +482,7 @@ function renderPhotoPreviews(){
       <div class="preview-num">Photo ${i+1} of ${currentPhotos.length}</div>
       <div class="preview-stage" id="stage-${i}">
         <img id="pimg-${i}" src="${esc(url)}" alt="" draggable="false"
-          style="object-position:${ox}% ${oy}%;transform:scale(${zoom});transform-origin:${ox}% ${oy}%"/>
+          style="object-position:${ox}% ${oy}%;width:${zoom*100}%;height:${zoom*100}%;top:${(100-zoom*100)/2}%;left:${(100-zoom*100)/2}%"/>
       </div>
       <div class="preview-controls">
         <div class="zoom-row">
@@ -515,17 +515,25 @@ window.updateZoom=function(idx,val){
 
 function applyImgStyle(idx){
   const img=document.getElementById('pimg-'+idx);
-  if(!img)return;
+  const stage=document.getElementById('stage-'+idx);
+  if(!img||!stage)return;
   const m=currentPhotoMeta[idx]||{zoom:1,ox:50,oy:50};
   const zoom=parseFloat(m.zoom)||1;
   const ox=parseFloat(m.ox)||50;
   const oy=parseFloat(m.oy)||50;
+  // Use same approach as frontend: object-fit:cover + object-position
+  // Zoom achieved by making the img bigger than the container
+  const pct=zoom*100;
+  img.style.width=pct+'%';
+  img.style.height=pct+'%';
+  img.style.top=((100-pct)/2)+'%';
+  img.style.left=((100-pct)/2)+'%';
   img.style.objectPosition=`${ox}% ${oy}%`;
-  img.style.transform=`scale(${zoom})`;
-  img.style.transformOrigin=`${ox}% ${oy}%`;
+  img.style.transform='';
+  img.style.transformOrigin='';
   // update hint label
-  const hint=document.querySelector(`#stage-${idx} ~ .preview-controls .preview-hint-txt`);
-  if(hint)hint.textContent=`Drag to reposition · ${ox.toFixed(0)}% ${oy.toFixed(0)}%`;
+  const actions=stage.nextElementSibling;
+  if(actions){const hint=actions.querySelector('.preview-hint-txt');if(hint)hint.textContent=`Drag to reposition · ${ox.toFixed(0)}% ${oy.toFixed(0)}%`;}
 }
 
 function bindStageDrag(idx){
