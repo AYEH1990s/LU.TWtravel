@@ -299,29 +299,10 @@ function cardHTML(p){
       const ox=parseFloat(m.ox)||50;
       const oy=parseFloat(m.oy)||50;
       const zoom=Math.max(0.5,parseFloat(m.zoom)||1);
-      // Convert canvas tx/ty formula to object-position %
-      // Canvas: dx=(SW-dw)*(ox/100), dw=SW*zoom
-      // object-position % positions the image's overflow relative to container
-      // At zoom>1: bgSize=zoom*100%, overflow=(zoom-1)*100%
-      //   object-position ox% shifts by overflow*ox/100 from left
-      //   This matches canvas: dx = (SW-SW*zoom)*(ox/100) = -overflow*ox/100
-      //   So object-position = ox% directly ✓
-      // At zoom<1: image smaller than container — use transform instead
-      const useTransform=zoom<1;
-      if(useTransform){
-        // image smaller: centre it and use translateX/Y to reposition
-        const tw=zoom*100; // width as % of container
-        const leftOff=(100-tw)/2; // centre
-        return `<div class="carousel-slide" style="overflow:hidden">
-          <img src="${esc(url)}" alt="${esc(p.name)}" loading="lazy"
-            style="position:absolute;width:${tw}%;height:auto;object-fit:contain;cursor:zoom-in;top:50%;left:${leftOff}%;transform:translateY(-50%)"
-            onload="positionSmallImg(this,${zoom},${ox},${oy})"
-            onclick="openLightbox(${JSON.stringify(photos).replace(/"/g,'&quot;')},${i})"/>
-        </div>`;
-      }
-      return `<div class="carousel-slide" style="overflow:hidden">
+      return `<div class="carousel-slide" style="overflow:hidden;position:relative">
         <img src="${esc(url)}" alt="${esc(p.name)}" loading="lazy"
-          style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:${ox}% ${oy}%;cursor:zoom-in"
+          style="position:absolute;cursor:zoom-in"
+          onload="positionSlideImg(this,${zoom},${ox},${oy})"
           onclick="openLightbox(${JSON.stringify(photos).replace(/"/g,'&quot;')},${i})"/>
       </div>`;
     }).join('');
@@ -439,27 +420,25 @@ document.addEventListener('keydown',e=>{
 
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
-// Position small image (zoom<1) — centre + offset by ox/oy
-window.positionSmallImg=function(img,zoom,ox,oy){
+// Mirror admin canvas formula EXACTLY
+// Canvas: dw=SW*zoom, dh=(SW/imgAR)*zoom
+// imgDx = (SW-dw)*(ox/100), imgDy = (SH-dh)*(oy/100)
+window.positionSlideImg=function(img,zoom,ox,oy){
   const slide=img.parentElement;
   if(!slide)return;
-  const SW=slide.offsetWidth||300;
-  const SH=slide.offsetHeight||190;
+  const SW=slide.offsetWidth||slide.clientWidth||300;
+  const SH=slide.offsetHeight||slide.clientHeight||190;
   const natW=img.naturalWidth,natH=img.naturalHeight;
   if(!natW||!natH)return;
   const imgAR=natW/natH;
   const dw=SW*zoom;
-  const dh=dw/imgAR;
-  // Extra space around image
-  const extraX=SW-dw;
-  const extraY=SH-dh;
-  const left=extraX*(ox/100);
-  const top=extraY*(oy/100);
+  const dh=(SW/imgAR)*zoom;
+  const imgDx=(SW-dw)*(ox/100);
+  const imgDy=(SH-dh)*(oy/100);
   img.style.width=dw+'px';
   img.style.height=dh+'px';
-  img.style.left=left+'px';
-  img.style.top=top+'px';
-  img.style.transform='';
+  img.style.left=imgDx+'px';
+  img.style.top=imgDy+'px';
 };
 
 onValue(ref(db,'places'),snap=>{

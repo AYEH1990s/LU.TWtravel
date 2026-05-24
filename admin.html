@@ -620,20 +620,21 @@ function applyDrag(idx,dx,dy){
 
   // Init tx/ty from ox/oy on first drag
   if(m.tx===undefined||m.ty===undefined){
-    m.tx=(SW-dw)*((m.ox||50)/100);
-    m.ty=(SH-dh)*((m.oy||50)/100);
+    const rX0=SW-dw; const rY0=SH-dh;
+    m.tx=rX0!==0?rX0*((m.ox||50)/100):0;
+    m.ty=rY0!==0?rY0*((m.oy||50)/100):0;
   }
 
   m.tx=(m.tx||0)+dx;
   m.ty=(m.ty||0)+dy;
 
-  // Clamp: works for both zoom>1 and zoom<1
+  // Clamp so image does not leave stage (min/max covers both zoom>1 and <1)
   const txMin=Math.min(0,SW-dw); const txMax=Math.max(0,SW-dw);
   const tyMin=Math.min(0,SH-dh); const tyMax=Math.max(0,SH-dh);
   m.tx=Math.max(txMin,Math.min(txMax,m.tx));
   m.ty=Math.max(tyMin,Math.min(tyMax,m.ty));
 
-  // Convert back to ox/oy %
+  // Convert back to ox/oy % (used by front-end and save)
   const rX=SW-dw; const rY=SH-dh;
   m.ox=rX!==0?Math.max(0,Math.min(100,(m.tx/rX)*100)):50;
   m.oy=rY!==0?Math.max(0,Math.min(100,(m.ty/rY)*100)):50;
