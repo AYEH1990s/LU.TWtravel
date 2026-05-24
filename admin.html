@@ -122,16 +122,20 @@ tr:hover td{background:#FAFAF8}
   display:flex;flex-direction:column;
 }
 .preview-viewport{
-  width:100%;height:160px;
+  width:100%;height:200px;
   overflow:hidden;position:relative;cursor:grab;
-  background:#000;user-select:none;
+  background:var(--surface);user-select:none;border-radius:0;
 }
 .preview-viewport:active{cursor:grabbing}
 .preview-viewport img{
   position:absolute;
+  top:50%;left:50%;
+  transform:translate(calc(-50% + var(--tx,0px)), calc(-50% + var(--ty,0px))) scale(var(--zoom,1));
   transform-origin:center center;
   pointer-events:none;
-  width:100%;height:100%;object-fit:cover;
+  width:100%;height:100%;
+  object-fit:cover;
+  min-width:100%;min-height:100%;
 }
 .preview-controls{
   padding:10px 12px;display:flex;flex-direction:column;gap:8px;
@@ -473,17 +477,17 @@ window.removePhoto=function(idx){
 function renderPhotoPreviews(){
   const wrap=document.getElementById('photosPreview');
   wrap.innerHTML=currentPhotos.map((url,i)=>{
-    const m=currentPhotoMeta[i]||{zoom:1,x:50,y:50};
+    const m=currentPhotoMeta[i]||{zoom:1,tx:0,ty:0};
     const zoom=parseFloat(m.zoom)||1;
-    const ox=parseFloat(m.x)||50;
-    const oy=parseFloat(m.y)||50;
+    const tx=parseFloat(m.tx)||0;
+    const ty=parseFloat(m.ty)||0;
     return `<div class="preview-item" style="width:100%">
-      <div class="preview-num">Photo ${i+1} of ${currentPhotos.length}</div>
+      <div class="preview-num" style="padding:6px 12px;font-size:11px;color:var(--hint);font-weight:500;background:var(--surface);border-bottom:1px solid var(--border)">Photo ${i+1} of ${currentPhotos.length}</div>
       <div class="preview-viewport" id="vp-${i}"
         onmousedown="vpDragStart(event,${i})"
         ontouchstart="vpTouchStart(event,${i})">
         <img id="pimg-${i}" src="${esc(url)}" alt=""
-          style="transform-origin:${ox}% ${oy}%;transform:scale(${zoom})" draggable="false"/>
+          style="--zoom:${zoom};--tx:${tx}px;--ty:${ty}px" draggable="false"/>
       </div>
       <div class="preview-controls">
         <div class="zoom-row">
@@ -491,7 +495,7 @@ function renderPhotoPreviews(){
           <input type="range" min="0.5" max="2.0" step="0.05" value="${zoom.toFixed(2)}"
             oninput="updateZoom(${i},this.value)" style="flex:1"/>
           <svg style="width:14px;height:14px;stroke:var(--muted);flex-shrink:0" fill="none" viewBox="0 0 24 24" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/><path d="M8 11h6M11 8v6"/></svg>
-          <span>${zoom.toFixed(1)}x</span>
+          <span id="zlabel-${i}">${zoom.toFixed(1)}x</span>
         </div>
         <div class="preview-actions">
           <span class="preview-hint">Drag image to reposition</span>
@@ -508,48 +512,43 @@ window.updateZoom=function(idx,val){
   const zoom=Math.min(2.0,Math.max(0.5,parseFloat(val)));
   currentPhotoMeta[idx].zoom=zoom;
   const img=document.getElementById('pimg-'+idx);
-  if(img){
-    const m=currentPhotoMeta[idx];
-    img.style.transformOrigin=`${m.x||50}% ${m.y||50}%`;
-    img.style.transform=`scale(${zoom})`;
-  }
-  // update label
-  const row=img&&img.closest('.preview-controls');
-  if(row){const sp=row.querySelector('span');if(sp)sp.textContent=zoom.toFixed(1)+'x';}
+  if(img) img.style.setProperty('--zoom',zoom);
+  const lbl=document.getElementById('zlabel-'+idx);
+  if(lbl) lbl.textContent=zoom.toFixed(1)+'x';
 };
 
-// drag to reposition
-let vpDragging={active:false,idx:-1,startX:0,startY:0,ox:50,oy:50};
+// drag to reposition — uses pixel translation
+let vpDragging={active:false,idx:-1,startX:0,startY:0,startTx:0,startTy:0};
 
 window.vpDragStart=function(e,idx){
   e.preventDefault();
-  const m=currentPhotoMeta[idx]||{x:50,y:50};
-  vpDragging={active:true,idx,startX:e.clientX,startY:e.clientY,ox:m.x||50,oy:m.y||50};
+  const m=currentPhotoMeta[idx]||{tx:0,ty:0};
+  vpDragging={active:true,idx,startX:e.clientX,startY:e.clientY,startTx:m.tx||0,startTy:m.ty||0};
   document.addEventListener('mousemove',vpDragMove);
   document.addEventListener('mouseup',vpDragEnd);
 };
 window.vpTouchStart=function(e,idx){
   const t=e.touches[0];
-  const m=currentPhotoMeta[idx]||{x:50,y:50};
-  vpDragging={active:true,idx,startX:t.clientX,startY:t.clientY,ox:m.x||50,oy:m.y||50};
+  const m=currentPhotoMeta[idx]||{tx:0,ty:0};
+  vpDragging={active:true,idx,startX:t.clientX,startY:t.clientY,startTx:m.tx||0,startTy:m.ty||0};
   document.addEventListener('touchmove',vpTouchMove,{passive:false});
   document.addEventListener('touchend',vpDragEnd);
 };
 function vpTouchMove(e){e.preventDefault();vpDragMove(e.touches[0]);}
 function vpDragMove(e){
   if(!vpDragging.active)return;
-  const{idx,startX,startY,ox,oy}=vpDragging;
-  const vp=document.getElementById('vp-'+idx);
-  if(!vp)return;
-  const{width:vpW,height:vpH}=vp.getBoundingClientRect();
+  const{idx,startX,startY,startTx,startTy}=vpDragging;
   const zoom=currentPhotoMeta[idx].zoom||1;
-  // sensitivity: moving across full viewport = 100% shift / zoom
-  const senX=100/(vpW*zoom);const senY=100/(vpH*zoom);
-  const newX=Math.max(0,Math.min(100,ox-(e.clientX-startX)*senX));
-  const newY=Math.max(0,Math.min(100,oy-(e.clientY-startY)*senY));
-  currentPhotoMeta[idx].x=newX;currentPhotoMeta[idx].y=newY;
+  // limit how far you can pan based on zoom level
+  const vp=document.getElementById('vp-'+idx);
+  const maxShift=vp?(vp.offsetWidth*(zoom-1)/2):100;
+  const maxShiftY=vp?(vp.offsetHeight*(zoom-1)/2):100;
+  const newTx=Math.max(-maxShift,Math.min(maxShift,startTx+(e.clientX-startX)));
+  const newTy=Math.max(-maxShiftY,Math.min(maxShiftY,startTy+(e.clientY-startY)));
+  currentPhotoMeta[idx].tx=newTx;
+  currentPhotoMeta[idx].ty=newTy;
   const img=document.getElementById('pimg-'+idx);
-  if(img){img.style.transformOrigin=`${newX}% ${newY}%`;}
+  if(img){img.style.setProperty('--tx',newTx+'px');img.style.setProperty('--ty',newTy+'px');}
 }
 function vpDragEnd(){
   vpDragging.active=false;
