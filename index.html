@@ -108,8 +108,11 @@ header p{font-size:14px;color:#A0A0A0;font-weight:300}
 
 /* collapsed: show less */
 .card-meta-collapsed{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+.card.expanded .card-meta-collapsed{display:none}
 .card-desc-short{font-size:13px;color:var(--muted);line-height:1.55;margin-bottom:12px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .card.expanded .card-desc-short{-webkit-line-clamp:unset;overflow:visible;margin-bottom:0}
+.card-links-collapsed{margin-bottom:12px}
+.card.expanded .card-links-collapsed{display:none}
 
 /* expanded: full details */
 .card-detail{display:none;flex-direction:column;gap:0}
@@ -350,29 +353,34 @@ function cardHTML(p){
         </button>
       </div>
 
-      <!-- COLLAPSED: metro summary + short desc -->
+      <!-- COLLAPSED: metro + walk + short desc -->
       <div class="card-meta-collapsed">
         <div class="meta-row">
           <svg class="meta-icon" fill="none" viewBox="0 0 24 24" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10v4M10 10v4M14 10v4M18 10v4"/></svg>
-          <div style="flex:1">${metroText}</div>
+          <div style="flex:1">${metroText}${transferHTML}</div>
         </div>
       </div>
       ${p.desc?`<div class="card-desc-short">${esc(p.desc)}</div>`:''}
       ${linksHTML?`<div class="card-links-collapsed">${linksHTML}</div>`:''}
 
-      <!-- EXPANDED: extra details only (no repeat) -->
+      <!-- EXPANDED: full info -->
       <div class="card-detail">
         <div class="detail-divider"></div>
         <div class="meta-list">
-          ${p.walkTime||p.transferType?`<div class="meta-row">
+          <div class="meta-row">
             <svg class="meta-icon" fill="none" viewBox="0 0 24 24" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10v4M10 10v4M14 10v4M18 10v4"/></svg>
             <div style="flex:1">${metroText}${transferHTML}</div>
-          </div>`:''}
+          </div>
           ${nearbyHTML?`<div class="meta-row">
             <svg class="meta-icon" fill="none" viewBox="0 0 24 24" stroke-width="2"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>
             <div style="flex:1"><div style="margin-bottom:4px;font-size:12px">Nearby</div><div class="nearby-wrap">${nearbyHTML}</div></div>
           </div>`:''}
+          ${p.desc?`<div class="meta-row" style="margin-top:4px">
+            <svg class="meta-icon" fill="none" viewBox="0 0 24 24" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h12"/></svg>
+            <span style="flex:1;line-height:1.6;font-size:13px;color:var(--muted)">${esc(p.desc)}</span>
+          </div>`:''}
         </div>
+        ${linksHTML}
       </div>
 
       <div class="card-footer">
