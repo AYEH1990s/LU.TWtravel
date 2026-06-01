@@ -375,7 +375,7 @@ function cardHTML(p){
           </div>`:''}
           ${p.desc?`<div class="meta-row" style="margin-top:4px">
             <svg class="meta-icon" fill="none" viewBox="0 0 24 24" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h12"/></svg>
-            <span style="flex:1;line-height:1.6;font-size:13px;color:var(--muted)">${esc(p.desc)}</span>
+            <span style="flex:1;line-height:1.8;font-size:13px;color:var(--muted)">${escNl(p.desc)}</span>
           </div>`:''}
         </div>
         ${linksHTML}
@@ -438,6 +438,7 @@ document.addEventListener('keydown',e=>{
 });
 
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function escNl(s){return esc(s).replace(/\n/g,'<br>');}
 
 // Mirror admin canvas formula EXACTLY
 // Canvas: dw=SW*zoom, dh=(SW/imgAR)*zoom
