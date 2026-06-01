@@ -83,7 +83,9 @@ tr:hover td{background:#FAFAF8}
 .tbl-btn:hover{border-color:var(--border-strong);color:var(--ink)}
 .tbl-btn.del:hover{border-color:var(--red);color:var(--red);background:var(--red-light)}
 .cat-pill{display:inline-block;font-size:10px;padding:2px 8px;border-radius:10px;background:var(--surface);color:var(--muted);border:1px solid var(--border);text-transform:capitalize}
-.empty-row td{text-align:center;padding:3rem;color:var(--hint)}
+.admin-chip{font-size:11px;padding:4px 12px;border-radius:20px;border:1px solid var(--border);background:var(--bg);color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.15s;white-space:nowrap}
+.admin-chip:hover{border-color:var(--red);color:var(--red)}
+.admin-chip.active{background:var(--red);color:#fff;border-color:var(--red)}
 .photo-thumb{width:36px;height:36px;border-radius:4px;object-fit:cover;border:1px solid var(--border)}
 .photo-count{font-size:11px;color:var(--hint);margin-left:4px}
 
@@ -208,6 +210,20 @@ tr:hover td{background:#FAFAF8}
       <button class="btn-add" onclick="openModal()">
         <svg fill="none" viewBox="0 0 24 24" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Add Place
       </button>
+    </div>
+    <!-- Category filter -->
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+      <button class="admin-chip active" data-cat="all" onclick="setAdminFilter('all')">All</button>
+      <button class="admin-chip" data-cat="landmark" onclick="setAdminFilter('landmark')">🏙️ Landmark</button>
+      <button class="admin-chip" data-cat="temple" onclick="setAdminFilter('temple')">⛩️ Temple</button>
+      <button class="admin-chip" data-cat="museum" onclick="setAdminFilter('museum')">🏛️ Museum</button>
+      <button class="admin-chip" data-cat="nature" onclick="setAdminFilter('nature')">🌿 Nature</button>
+      <button class="admin-chip" data-cat="beach" onclick="setAdminFilter('beach')">🌊 Beach & Lake</button>
+      <button class="admin-chip" data-cat="nightmarket" onclick="setAdminFilter('nightmarket')">🍢 Night Market</button>
+      <button class="admin-chip" data-cat="food" onclick="setAdminFilter('food')">🍜 Food & Dining</button>
+      <button class="admin-chip" data-cat="shopping" onclick="setAdminFilter('shopping')">🛍️ Shopping</button>
+      <button class="admin-chip" data-cat="historic" onclick="setAdminFilter('historic')">🏘️ Historic District</button>
+      <button class="admin-chip" data-cat="entertainment" onclick="setAdminFilter('entertainment')">🎡 Entertainment</button>
     </div>
     <div class="table-wrap">
       <div class="admin-search">
@@ -372,9 +388,20 @@ function updateStats(){
   document.getElementById('statCats').textContent=new Set(allPlaces.map(p=>p.category).filter(Boolean)).size;
 }
 
+let currentAdminFilter='all';
+window.setAdminFilter=function(cat){
+  currentAdminFilter=cat;
+  document.querySelectorAll('.admin-chip').forEach(b=>b.classList.toggle('active',b.dataset.cat===cat));
+  renderTable();
+};
+
 window.renderTable=function(){
   const q=(document.getElementById('adminSearch').value||'').toLowerCase();
-  const list=allPlaces.filter(p=>!q||[p.name,p.nameZh,p.metroStation,p.metroLine,p.district,p.category].some(f=>f&&f.toLowerCase().includes(q)));
+  const list=allPlaces.filter(p=>{
+    const matchCat=currentAdminFilter==='all'||p.category===currentAdminFilter;
+    const matchQ=!q||[p.name,p.nameZh,p.metroStation,p.metroLine,p.district,p.category].some(f=>f&&f.toLowerCase().includes(q));
+    return matchCat&&matchQ;
+  });
   const tbody=document.getElementById('placesTableBody');
   if(!list.length){ tbody.innerHTML='<tr class="empty-row"><td colspan="7">No places found.</td></tr>'; return; }
   tbody.innerHTML=list.map(p=>{

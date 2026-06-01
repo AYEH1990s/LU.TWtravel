@@ -358,6 +358,7 @@ function cardHTML(p){
         </div>
       </div>
       ${p.desc?`<div class="card-desc-short">${esc(p.desc)}</div>`:''}
+      ${linksHTML?`<div class="card-links-collapsed">${linksHTML}</div>`:''}
 
       <!-- EXPANDED: extra details only (no repeat) -->
       <div class="card-detail">
@@ -372,7 +373,6 @@ function cardHTML(p){
             <div style="flex:1"><div style="margin-bottom:4px;font-size:12px">Nearby</div><div class="nearby-wrap">${nearbyHTML}</div></div>
           </div>`:''}
         </div>
-        ${linksHTML}
       </div>
 
       <div class="card-footer">
