@@ -278,6 +278,13 @@ tr:hover td{background:#FAFAF8}
       <div class="field"><label>Emoji (fallback)</label><input type="text" id="fEmoji" placeholder="🏮" maxlength="4"/></div>
       <div class="field"><label>Google Maps URL</label><input type="url" id="fMapUrl" placeholder="https://maps.google.com/?q=…"/></div>
 
+      <!-- Reference Links -->
+      <div class="section-title">🔗 Reference Links</div>
+      <div class="field full" style="grid-column:1/-1">
+        <div id="linksContainer" style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px"></div>
+        <button type="button" onclick="addLinkRow()" style="font-size:12px;padding:6px 14px;border-radius:var(--radius-sm);border:1px dashed var(--border);background:transparent;color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif;width:100%;transition:all 0.15s" onmouseover="this.style.borderColor='var(--red)';this.style.color='var(--red)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">+ Add Link</button>
+      </div>
+
       <!-- Photos -->
       <div class="section-title">📸 Photos (up to 5)</div>
       <div class="photo-upload-area full" id="uploadArea">
@@ -397,6 +404,7 @@ window.openModal=function(){
    'fTransferType','fTransferTime','fTransferDetail','fDistrict','fPrice',
    'fNearby','fDesc','fEmoji','fMapUrl'].forEach(id=>{ document.getElementById(id).value=''; });
   currentPhotos=[];currentPhotoMeta=[];currentPublicIds=[];
+  resetLinks();
   renderPhotoPreviews();
   document.getElementById('modalBackdrop').classList.add('open');
 };
@@ -420,7 +428,7 @@ window.editPlace=function(id){
   document.getElementById('fDesc').value=p.desc||'';
   document.getElementById('fEmoji').value=p.emoji||'';
   document.getElementById('fMapUrl').value=p.mapUrl||'';
-  currentPhotos=[...(p.photos||[])];
+  loadLinks(p.links||[]);
   currentPublicIds=[...(p.photoPublicIds||[])];
   // ensure publicIds length matches photos
   while(currentPublicIds.length<currentPhotos.length) currentPublicIds.push(null);
@@ -694,7 +702,7 @@ window.savePlace=async function(){
     desc:document.getElementById('fDesc').value.trim(),
     emoji:document.getElementById('fEmoji').value.trim(),
     mapUrl:document.getElementById('fMapUrl').value.trim(),
-    photos:currentPhotos,
+    links:getValidLinks(),
     photoPublicIds:currentPublicIds,
     photoMeta:currentPhotoMeta.map(m=>({
       zoom:parseFloat(m.zoom)||1,
@@ -732,7 +740,48 @@ window.deletePlace=async function(id,name){
   catch(e){ showToast('Error: '+e.message,'error'); }
 };
 
-// ── CLEANUP LIST ──
+// ── REFERENCE LINKS ──
+let currentLinks=[];
+
+window.addLinkRow=function(name='',url=''){
+  const idx=currentLinks.length;
+  currentLinks.push({name,url});
+  const row=document.createElement('div');
+  row.id='link-row-'+idx;
+  row.style.cssText='display:flex;gap:8px;align-items:center';
+  row.innerHTML=`
+    <input type="text" placeholder="Name (e.g. Official Website)" value="${esc(name)}"
+      style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'DM Sans',sans-serif;color:var(--ink);background:var(--card);outline:none"
+      oninput="currentLinks[${idx}].name=this.value" onfocus="this.style.borderColor='var(--red)'" onblur="this.style.borderColor='var(--border)'"/>
+    <input type="url" placeholder="https://..." value="${esc(url)}"
+      style="flex:2;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'DM Sans',sans-serif;color:var(--ink);background:var(--card);outline:none"
+      oninput="currentLinks[${idx}].url=this.value" onfocus="this.style.borderColor='var(--red)'" onblur="this.style.borderColor='var(--border)'"/>
+    <button type="button" onclick="removeLinkRow(${idx})"
+      style="width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:var(--bg);color:var(--muted);cursor:pointer;font-size:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all 0.12s"
+      onmouseover="this.style.borderColor='var(--red)';this.style.color='var(--red)';this.style.background='var(--red-light)'"
+      onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)';this.style.background='var(--bg)'">✕</button>`;
+  document.getElementById('linksContainer').appendChild(row);
+};
+
+window.removeLinkRow=function(idx){
+  currentLinks[idx]={removed:true};
+  const row=document.getElementById('link-row-'+idx);
+  if(row) row.remove();
+};
+
+function getValidLinks(){
+  return currentLinks.filter(l=>l&&!l.removed&&l.name&&l.url);
+}
+
+function resetLinks(){
+  currentLinks=[];
+  document.getElementById('linksContainer').innerHTML='';
+}
+
+function loadLinks(links){
+  resetLinks();
+  (links||[]).forEach(l=>addLinkRow(l.name,l.url));
+}
 let cleanupItems=[];
 onValue(ref(db,'pending_cleanup'),snap=>{
   const data=snap.val();

@@ -157,7 +157,9 @@ header p{font-size:14px;color:#A0A0A0;font-weight:300}
 #lightbox-counter{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,0.6);font-size:13px;font-family:'DM Sans',sans-serif}
 #lightbox-prev:disabled,#lightbox-next:disabled{opacity:0.2;cursor:default}
 
-.state-box{text-align:center;padding:4rem 1rem;color:var(--hint);grid-column:1/-1}
+.link-btn{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:500;padding:5px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);color:var(--ink);text-decoration:none;background:var(--bg);transition:all 0.15s;white-space:nowrap}
+.link-btn:hover{border-color:var(--red);color:var(--red);background:var(--red-light)}
+.link-btn svg{width:12px;height:12px;stroke:currentColor}
 .state-box svg{width:40px;height:40px;stroke:var(--border);display:block;margin:0 auto 12px}
 footer{text-align:center;padding:2rem 1rem;font-size:12px;color:var(--hint);border-top:1px solid var(--border)}
 </style>
@@ -319,6 +321,16 @@ function cardHTML(p){
   const metroText=`${lineBadge}<span>${esc(p.metroStation||'')}${walkText}</span>`;
   const transferHTML=p.transferType?`<div class="transfer-row"><svg class="transfer-icon" fill="none" viewBox="0 0 24 24" stroke-width="2"><path d="M9 12h6m-3-3v6"/><circle cx="12" cy="12" r="10"/></svg><span>${esc(p.transferType)}${p.transferDetail?' — '+esc(p.transferDetail):''}${p.transferTime?' ('+esc(p.transferTime)+')':''}</span></div>`:'';
   const nearbyHTML=(p.nearby||[]).map(n=>`<span class="nearby-tag">${esc(n)}</span>`).join('');
+  const validLinks=(p.links||[]).filter(l=>l&&l.name&&l.url);
+  const linksHTML=validLinks.length?`
+    <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+      <div style="font-size:11px;color:var(--hint);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px">🔗 Links</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        ${validLinks.map(l=>`<a href="${esc(l.url)}" target="_blank" rel="noopener" class="link-btn">
+          ${esc(l.name)}<svg fill="none" viewBox="0 0 24 24" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        </a>`).join('')}
+      </div>
+    </div>`:'';
 
   return `<div class="card">
     <div class="carousel" data-index="0">
@@ -360,6 +372,7 @@ function cardHTML(p){
             <div style="flex:1"><div style="margin-bottom:4px;font-size:12px">Nearby</div><div class="nearby-wrap">${nearbyHTML}</div></div>
           </div>`:''}
         </div>
+        ${linksHTML}
       </div>
 
       <div class="card-footer">
