@@ -775,14 +775,15 @@ window.addLinkRow=function(name='',url=''){
   currentLinks.push({name,url});
   const row=document.createElement('div');
   row.id='link-row-'+idx;
+  row.dataset.linkIdx=idx;
   row.style.cssText='display:flex;gap:8px;align-items:center';
   row.innerHTML=`
-    <input type="text" placeholder="Name (e.g. Official Website)" value="${esc(name)}"
+    <input type="text" class="link-name-input" placeholder="Name (e.g. Official Website)" value="${esc(name)}"
       style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'DM Sans',sans-serif;color:var(--ink);background:var(--card);outline:none"
-      oninput="currentLinks[${idx}].name=this.value" onfocus="this.style.borderColor='var(--red)'" onblur="this.style.borderColor='var(--border)'"/>
-    <input type="url" placeholder="https://..." value="${esc(url)}"
+      onfocus="this.style.borderColor='var(--red)'" onblur="this.style.borderColor='var(--border)'"/>
+    <input type="url" class="link-url-input" placeholder="https://..." value="${esc(url)}"
       style="flex:2;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'DM Sans',sans-serif;color:var(--ink);background:var(--card);outline:none"
-      oninput="currentLinks[${idx}].url=this.value" onfocus="this.style.borderColor='var(--red)'" onblur="this.style.borderColor='var(--border)'"/>
+      onfocus="this.style.borderColor='var(--red)'" onblur="this.style.borderColor='var(--border)'"/>
     <button type="button" onclick="removeLinkRow(${idx})"
       style="width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:var(--bg);color:var(--muted);cursor:pointer;font-size:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all 0.12s"
       onmouseover="this.style.borderColor='var(--red)';this.style.color='var(--red)';this.style.background='var(--red-light)'"
@@ -791,13 +792,20 @@ window.addLinkRow=function(name='',url=''){
 };
 
 window.removeLinkRow=function(idx){
-  currentLinks[idx]={removed:true};
   const row=document.getElementById('link-row-'+idx);
   if(row) row.remove();
 };
 
 function getValidLinks(){
-  return currentLinks.filter(l=>l&&!l.removed&&l.name&&l.url);
+  // Read directly from DOM — avoids module scope issues with inline oninput
+  const rows=document.querySelectorAll('#linksContainer [data-link-idx]');
+  const links=[];
+  rows.forEach(row=>{
+    const name=(row.querySelector('.link-name-input')||{}).value||'';
+    const url=(row.querySelector('.link-url-input')||{}).value||'';
+    if(name.trim()&&url.trim()) links.push({name:name.trim(),url:url.trim()});
+  });
+  return links;
 }
 
 function resetLinks(){
