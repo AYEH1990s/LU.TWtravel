@@ -186,6 +186,22 @@ tr:hover td{background:#FAFAF8}
       <div class="stat-card"><div class="stat-label">Free Entry</div><div class="stat-val" id="statFree">—</div></div>
       <div class="stat-card"><div class="stat-label">Metro Stations</div><div class="stat-val" id="statStations">—</div></div>
       <div class="stat-card"><div class="stat-label">Categories</div><div class="stat-val" id="statCats">—</div></div>
+      <div class="stat-card" id="cleanupCard" style="cursor:pointer;border-color:var(--border)" onclick="toggleCleanup()">
+        <div class="stat-label">Pending Cleanup</div>
+        <div class="stat-val" id="statCleanup">—</div>
+      </div>
+    </div>
+
+    <!-- CLEANUP PANEL -->
+    <div id="cleanupPanel" style="display:none;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin-bottom:1.5rem">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div>
+          <div style="font-family:'Playfair Display',serif;font-size:17px;font-weight:600;color:var(--ink)">Cloudinary Cleanup List</div>
+          <div style="font-size:12px;color:var(--hint);margin-top:2px">These photos were removed from places. Delete them manually in Cloudinary, then click "Clear List".</div>
+        </div>
+        <button onclick="clearCleanupList()" style="font-size:12px;padding:6px 14px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg);color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif">Clear List</button>
+      </div>
+      <div id="cleanupList" style="display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto"></div>
     </div>
     <div class="action-row">
       <h2>All Places</h2>
@@ -301,7 +317,7 @@ const auth     = getAuth(app);
 const db       = getDatabase(app);
 const provider = new GoogleAuthProvider();
 
-let allPlaces=[], currentPhotos=[], currentPhotoMeta=[];
+let allPlaces=[], currentPhotos=[], currentPhotoMeta=[], currentPublicIds=[];
 
 // ── AUTH ──
 onAuthStateChanged(auth,user=>{
@@ -380,7 +396,7 @@ window.openModal=function(){
   ['fName','fNameZh','fCategory','fMetroStation','fMetroLine','fWalkTime',
    'fTransferType','fTransferTime','fTransferDetail','fDistrict','fPrice',
    'fNearby','fDesc','fEmoji','fMapUrl'].forEach(id=>{ document.getElementById(id).value=''; });
-  currentPhotos=[];currentPhotoMeta=[];
+  currentPhotos=[];currentPhotoMeta=[];currentPublicIds=[];
   renderPhotoPreviews();
   document.getElementById('modalBackdrop').classList.add('open');
 };
@@ -405,6 +421,9 @@ window.editPlace=function(id){
   document.getElementById('fEmoji').value=p.emoji||'';
   document.getElementById('fMapUrl').value=p.mapUrl||'';
   currentPhotos=[...(p.photos||[])];
+  currentPublicIds=[...(p.photoPublicIds||[])];
+  // ensure publicIds length matches photos
+  while(currentPublicIds.length<currentPhotos.length) currentPublicIds.push(null);
   currentPhotoMeta=(p.photoMeta||[]).map(m=>({
     zoom:parseFloat(m.zoom)||1,
     ox:m.ox!=null?parseFloat(m.ox):50,
@@ -429,8 +448,9 @@ window.handleFiles=async function(files){
     prog.textContent=`Uploading ${i+1} / ${toUpload.length}…`;
     try{
       const compressed=await compressImage(toUpload[i],1200,0.82);
-      const url=await uploadToCloudinary(compressed);
+      const {url,publicId}=await uploadToCloudinary(compressed);
       currentPhotos.push(url);
+      currentPublicIds.push(publicId);
       currentPhotoMeta.push({zoom:1,ox:50,oy:50});
       renderPhotoPreviews();
     }catch(e){showToast('Upload failed: '+e.message,'error');}
@@ -460,11 +480,23 @@ async function uploadToCloudinary(blob){
   fd.append('file',blob);fd.append('upload_preset',CLOUDINARY_PRESET);
   const res=await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`,{method:'POST',body:fd});
   if(!res.ok)throw new Error('Cloudinary error '+res.status);
-  return (await res.json()).secure_url;
+  const data=await res.json();
+  return {url:data.secure_url, publicId:data.public_id};
 }
 
 window.removePhoto=function(idx){
-  currentPhotos.splice(idx,1);currentPhotoMeta.splice(idx,1);
+  // Record the publicId for manual Cloudinary cleanup later
+  const pid=currentPublicIds[idx];
+  if(pid){
+    push(ref(db,'pending_cleanup'),{
+      publicId:pid,
+      url:currentPhotos[idx],
+      removedAt:Date.now()
+    }).catch(()=>{});// best-effort, don't block UI
+  }
+  currentPhotos.splice(idx,1);
+  currentPhotoMeta.splice(idx,1);
+  currentPublicIds.splice(idx,1);
   renderPhotoPreviews();
 };
 
@@ -663,6 +695,7 @@ window.savePlace=async function(){
     emoji:document.getElementById('fEmoji').value.trim(),
     mapUrl:document.getElementById('fMapUrl').value.trim(),
     photos:currentPhotos,
+    photoPublicIds:currentPublicIds,
     photoMeta:currentPhotoMeta.map(m=>({
       zoom:parseFloat(m.zoom)||1,
       ox:parseFloat(m.ox)||50,
@@ -681,8 +714,64 @@ window.savePlace=async function(){
 
 window.deletePlace=async function(id,name){
   if(!confirm(`Delete "${name}"? This cannot be undone.`))return;
-  try{ await remove(ref(db,'places/'+id)); showToast('Deleted.','success'); }
+  try{
+    // Record all photos of this place to pending_cleanup
+    const place=allPlaces.find(p=>p.id===id);
+    if(place&&place.photoPublicIds){
+      const pids=place.photoPublicIds;
+      const urls=place.photos||[];
+      for(let i=0;i<pids.length;i++){
+        if(pids[i]) await push(ref(db,'pending_cleanup'),{
+          publicId:pids[i], url:urls[i]||'', removedAt:Date.now()
+        });
+      }
+    }
+    await remove(ref(db,'places/'+id));
+    showToast('Deleted.','success');
+  }
   catch(e){ showToast('Error: '+e.message,'error'); }
+};
+
+// ── CLEANUP LIST ──
+let cleanupItems=[];
+onValue(ref(db,'pending_cleanup'),snap=>{
+  const data=snap.val();
+  cleanupItems=data?Object.entries(data).map(([id,v])=>({id,...v})):[];
+  const count=cleanupItems.length;
+  document.getElementById('statCleanup').textContent=count;
+  const card=document.getElementById('cleanupCard');
+  if(card) card.style.borderColor=count>0?'var(--red)':'var(--border)';
+  renderCleanupList();
+});
+
+function renderCleanupList(){
+  const el=document.getElementById('cleanupList');
+  if(!el)return;
+  if(!cleanupItems.length){
+    el.innerHTML='<div style="font-size:13px;color:var(--hint);padding:8px 0">No pending items.</div>';
+    return;
+  }
+  el.innerHTML=cleanupItems.map(item=>`
+    <div style="display:flex;align-items:center;gap:10px;font-size:12px;padding:6px 8px;background:var(--surface);border-radius:6px">
+      <span style="font-family:monospace;color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(item.publicId||'')}</span>
+      <a href="https://console.cloudinary.com/console/media_library/search?q=${encodeURIComponent(item.publicId||'')}" target="_blank" rel="noopener"
+        style="color:var(--red);text-decoration:none;white-space:nowrap;flex-shrink:0">Open in Cloudinary ↗</a>
+    </div>`).join('');
+}
+
+window.toggleCleanup=function(){
+  const panel=document.getElementById('cleanupPanel');
+  if(panel) panel.style.display=panel.style.display==='none'?'block':'none';
+};
+
+window.clearCleanupList=async function(){
+  if(!cleanupItems.length)return;
+  if(!confirm('Mark all as cleaned? Only do this after deleting them in Cloudinary.'))return;
+  try{
+    await remove(ref(db,'pending_cleanup'));
+    showToast('Cleanup list cleared.','success');
+    document.getElementById('cleanupPanel').style.display='none';
+  }catch(e){showToast('Error: '+e.message,'error');}
 };
 
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
