@@ -480,8 +480,17 @@ window.editPlace=function(id){
   document.getElementById('modalBackdrop').classList.add('open');
 };
 
-window.closeModal=function(){ document.getElementById('modalBackdrop').classList.remove('open'); };
-window.backdropClick=function(e){ if(e.target===document.getElementById('modalBackdrop'))closeModal(); };
+window.closeModal=function(force=false){
+  if(!force){
+    const hasContent=document.getElementById('fName').value.trim()||
+      document.getElementById('fDesc').value.trim()||
+      currentPhotos.length>0||
+      document.querySelectorAll('#fCategoryGrid input:checked').length>0;
+    if(hasContent&&!confirm('Close without saving? Your changes will be lost.'))return;
+  }
+  document.getElementById('modalBackdrop').classList.remove('open');
+};
+window.backdropClick=function(e){if(e.target===document.getElementById('modalBackdrop'))closeModal();};
 
 // ── PHOTO UPLOAD ──
 window.handleFiles=async function(files){
@@ -754,7 +763,7 @@ window.savePlace=async function(){
     const id=document.getElementById('editId').value;
     if(id){ await update(ref(db,'places/'+id),data); showToast('Place updated!','success'); }
     else { data.createdAt=Date.now(); await push(ref(db,'places'),data); showToast('Place added!','success'); }
-    closeModal();
+    closeModal(true);
   } catch(e){ showToast('Error: '+e.message,'error'); }
   btn.disabled=false; btn.textContent='Save Place';
 };
