@@ -741,6 +741,7 @@ window.savePlace=async function(){
     emoji:document.getElementById('fEmoji').value.trim(),
     mapUrl:document.getElementById('fMapUrl').value.trim(),
     links:getValidLinks(),
+    photos:currentPhotos,
     photoPublicIds:currentPublicIds,
     photoMeta:currentPhotoMeta.map(m=>({
       zoom:parseFloat(m.zoom)||1,
