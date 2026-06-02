@@ -184,6 +184,7 @@ footer{text-align:center;padding:2rem 1rem;font-size:12px;color:var(--hint);bord
     <div class="filter-scroll">
       <div class="filter-chips">
         <button class="chip active" data-cat="all" onclick="setFilter('all')">All</button>
+        <button class="chip" data-cat="bubbletea" onclick="setFilter('bubbletea')">🧋 Bubble Tea</button>
         <button class="chip" data-cat="landmark" onclick="setFilter('landmark')">🏙️ Landmark</button>
         <button class="chip" data-cat="temple" onclick="setFilter('temple')">⛩️ Temple</button>
         <button class="chip" data-cat="museum" onclick="setFilter('museum')">🏛️ Museum</button>
@@ -251,7 +252,7 @@ window.toggleCard=function(cardEl){
 window.render=function(){
   const q=document.getElementById('searchInput').value.toLowerCase();
   let list=allPlaces.filter(p=>{
-    const matchCat=currentFilter==='all'||p.category===currentFilter;
+    const matchCat=currentFilter==='all'||(Array.isArray(p.categories)?p.categories.includes(currentFilter):p.category===currentFilter);
     const matchQ=!q||[p.name,p.nameZh,p.district,p.metroStation,p.metroLine,p.desc].some(f=>f&&f.toLowerCase().includes(q));
     return matchCat&&matchQ;
   });
@@ -292,7 +293,9 @@ function cardHTML(p){
   const photos=Array.isArray(p.photos)&&p.photos.length?p.photos:[];
   const photoMeta=Array.isArray(p.photoMeta)?p.photoMeta:[];
   const isFree=!p.price||p.price==0;
-  const catLabel=(p.category||'').replace('nightmarket','Night Market').replace('historic','Historic District');
+  const catMap={landmark:'Landmark',temple:'Temple',museum:'Museum',nature:'Nature',beach:'Beach & Lake',nightmarket:'Night Market',food:'Food & Dining',bubbletea:'Bubble Tea',shopping:'Shopping',historic:'Historic District',entertainment:'Entertainment'};
+  const firstCat=(Array.isArray(p.categories)&&p.categories.length?p.categories[0]:p.category)||'';
+  const catLabel=catMap[firstCat]||firstCat;
 
   // carousel
   let slidesHTML='';

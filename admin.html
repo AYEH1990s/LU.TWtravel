@@ -86,6 +86,11 @@ tr:hover td{background:#FAFAF8}
 .admin-chip{font-size:11px;padding:4px 12px;border-radius:20px;border:1px solid var(--border);background:var(--bg);color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.15s;white-space:nowrap}
 .admin-chip:hover{border-color:var(--red);color:var(--red)}
 .admin-chip.active{background:var(--red);color:#fff;border-color:var(--red)}
+.cat-check-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px;padding:4px 0}
+.cat-check{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);cursor:pointer;padding:6px 8px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg);transition:all 0.12s;user-select:none}
+.cat-check:hover{border-color:var(--red);color:var(--red)}
+.cat-check input[type=checkbox]{accent-color:var(--red);width:14px;height:14px;cursor:pointer}
+.cat-check:has(input:checked){border-color:var(--red);background:var(--red-light);color:var(--red)}
 .photo-thumb{width:36px;height:36px;border-radius:4px;object-fit:cover;border:1px solid var(--border)}
 .photo-count{font-size:11px;color:var(--hint);margin-left:4px}
 
@@ -214,6 +219,7 @@ tr:hover td{background:#FAFAF8}
     <!-- Category filter -->
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
       <button class="admin-chip active" data-cat="all" onclick="setAdminFilter('all')">All</button>
+      <button class="admin-chip" data-cat="bubbletea" onclick="setAdminFilter('bubbletea')">🧋 Bubble Tea</button>
       <button class="admin-chip" data-cat="landmark" onclick="setAdminFilter('landmark')">🏙️ Landmark</button>
       <button class="admin-chip" data-cat="temple" onclick="setAdminFilter('temple')">⛩️ Temple</button>
       <button class="admin-chip" data-cat="museum" onclick="setAdminFilter('museum')">🏛️ Museum</button>
@@ -251,20 +257,20 @@ tr:hover td{background:#FAFAF8}
       <!-- Basic Info -->
       <div class="field full"><label>English Name *</label><input type="text" id="fName" placeholder="e.g. Jiufen Old Street"/></div>
       <div class="field"><label>Chinese Name</label><input type="text" id="fNameZh" placeholder="e.g. 九份老街"/></div>
-      <div class="field"><label>Category *</label>
-        <select id="fCategory">
-          <option value="">— Select —</option>
-          <option value="landmark">🏙️ Landmark</option>
-          <option value="temple">⛩️ Temple & Religion</option>
-          <option value="museum">🏛️ Museum & Culture</option>
-          <option value="nature">🌿 Nature & Park</option>
-          <option value="beach">🌊 Beach & Lake</option>
-          <option value="nightmarket">🍢 Night Market</option>
-          <option value="food">🍜 Food & Dining</option>
-          <option value="shopping">🛍️ Shopping</option>
-          <option value="historic">🏘️ Historic District</option>
-          <option value="entertainment">🎡 Entertainment</option>
-        </select>
+      <div class="field full"><label>Categories * (select all that apply)</label>
+        <div class="cat-check-grid" id="fCategoryGrid">
+          <label class="cat-check"><input type="checkbox" name="fCategory" value="landmark"/><span>🏙️ Landmark</span></label>
+          <label class="cat-check"><input type="checkbox" name="fCategory" value="temple"/><span>⛩️ Temple</span></label>
+          <label class="cat-check"><input type="checkbox" name="fCategory" value="museum"/><span>🏛️ Museum</span></label>
+          <label class="cat-check"><input type="checkbox" name="fCategory" value="nature"/><span>🌿 Nature</span></label>
+          <label class="cat-check"><input type="checkbox" name="fCategory" value="beach"/><span>🌊 Beach & Lake</span></label>
+          <label class="cat-check"><input type="checkbox" name="fCategory" value="nightmarket"/><span>🍢 Night Market</span></label>
+          <label class="cat-check"><input type="checkbox" name="fCategory" value="food"/><span>🍜 Food & Dining</span></label>
+          <label class="cat-check"><input type="checkbox" name="fCategory" value="bubbletea"/><span>🧋 Bubble Tea</span></label>
+          <label class="cat-check"><input type="checkbox" name="fCategory" value="shopping"/><span>🛍️ Shopping</span></label>
+          <label class="cat-check"><input type="checkbox" name="fCategory" value="historic"/><span>🏘️ Historic District</span></label>
+          <label class="cat-check"><input type="checkbox" name="fCategory" value="entertainment"/><span>🎡 Entertainment</span></label>
+        </div>
       </div>
       <div class="field"><label>District</label><input type="text" id="fDistrict" placeholder="e.g. Shilin, Taipei"/></div>
       <div class="field"><label>Ticket Price (NT$, 0 = Free)</label><input type="number" id="fPrice" placeholder="0" min="0"/></div>
@@ -385,7 +391,7 @@ function updateStats(){
   document.getElementById('statTotal').textContent=allPlaces.length;
   document.getElementById('statFree').textContent=allPlaces.filter(p=>!p.price||p.price==0).length;
   document.getElementById('statStations').textContent=new Set(allPlaces.map(p=>p.metroStation).filter(Boolean)).size;
-  document.getElementById('statCats').textContent=new Set(allPlaces.map(p=>p.category).filter(Boolean)).size;
+  const allCats=allPlaces.flatMap(p=>Array.isArray(p.categories)?p.categories:(p.category?[p.category]:[]));  document.getElementById('statCats').textContent=new Set(allCats.filter(Boolean)).size;
 }
 
 let currentAdminFilter='all';
@@ -398,7 +404,7 @@ window.setAdminFilter=function(cat){
 window.renderTable=function(){
   const q=(document.getElementById('adminSearch').value||'').toLowerCase();
   const list=allPlaces.filter(p=>{
-    const matchCat=currentAdminFilter==='all'||p.category===currentAdminFilter;
+    const matchCat=currentAdminFilter==='all'||(Array.isArray(p.categories)?p.categories.includes(currentAdminFilter):p.category===currentAdminFilter);
     const matchQ=!q||[p.name,p.nameZh,p.metroStation,p.metroLine,p.district,p.category].some(f=>f&&f.toLowerCase().includes(q));
     return matchCat&&matchQ;
   });
@@ -413,7 +419,7 @@ window.renderTable=function(){
       <td><div style="display:flex;align-items:center;gap:4px">${thumbHTML}</div></td>
       <td><div class="td-metro"><div class="metro-dot-sm"></div>${esc(p.metroStation||'—')}</div></td>
       <td>${esc(p.metroLine||'—')}</td>
-      <td><span class="cat-pill">${esc(p.category||'—')}</span></td>
+      <td>${(Array.isArray(p.categories)&&p.categories.length?p.categories:[p.category||'—']).map(c=>`<span class="cat-pill">${esc(c)}</span>`).join(' ')}</td>
       <td class="td-price ${isFree?'free':''}">${isFree?'Free':'NT$'+p.price}</td>
       <td><div class="td-actions">
         <button class="tbl-btn" onclick="editPlace('${p.id}')">Edit</button>
@@ -427,9 +433,10 @@ window.renderTable=function(){
 window.openModal=function(){
   document.getElementById('modalTitle').textContent='Add New Place';
   document.getElementById('editId').value='';
-  ['fName','fNameZh','fCategory','fMetroStation','fMetroLine','fWalkTime',
+  ['fName','fNameZh','fMetroStation','fMetroLine','fWalkTime',
    'fTransferType','fTransferTime','fTransferDetail','fDistrict','fPrice',
    'fNearby','fDesc','fEmoji','fMapUrl'].forEach(id=>{ document.getElementById(id).value=''; });
+  document.querySelectorAll('#fCategoryGrid input[type=checkbox]').forEach(cb=>cb.checked=false);
   currentPhotos=[];currentPhotoMeta=[];currentPublicIds=[];
   resetLinks();
   renderPhotoPreviews();
@@ -442,7 +449,11 @@ window.editPlace=function(id){
   document.getElementById('editId').value=id;
   document.getElementById('fName').value=p.name||'';
   document.getElementById('fNameZh').value=p.nameZh||'';
-  document.getElementById('fCategory').value=p.category||'';
+  // Load categories (support both old string and new array)
+  const cats=Array.isArray(p.categories)?p.categories:(p.category?[p.category]:[]);
+  document.querySelectorAll('#fCategoryGrid input[type=checkbox]').forEach(cb=>{
+    cb.checked=cats.includes(cb.value);
+  });
   document.getElementById('fMetroStation').value=p.metroStation||'';
   document.getElementById('fMetroLine').value=p.metroLine||'';
   document.getElementById('fWalkTime').value=p.walkTime||'';
@@ -710,14 +721,14 @@ function applyDrag(idx,dx,dy){
 // ── SAVE ──
 window.savePlace=async function(){
   const name=document.getElementById('fName').value.trim();
-  const cat=document.getElementById('fCategory').value;
+  const cats=[...document.querySelectorAll('#fCategoryGrid input[type=checkbox]:checked')].map(cb=>cb.value);
   const mrt=document.getElementById('fMetroStation').value.trim();
-  if(!name||!cat||!mrt){ showToast('Name, Category, and Metro Station are required.','error'); return; }
+  if(!name||!cats.length||!mrt){ showToast('Name, at least one Category, and Metro Station are required.','error'); return; }
   const btn=document.getElementById('saveBtn');
   btn.disabled=true; btn.textContent='Saving…';
   const data={
     name, nameZh:document.getElementById('fNameZh').value.trim(),
-    category:cat, metroStation:mrt,
+    categories:cats, category:cats[0]||'', metroStation:mrt,
     metroLine:document.getElementById('fMetroLine').value.trim(),
     walkTime:document.getElementById('fWalkTime').value.trim(),
     transferType:document.getElementById('fTransferType').value,
