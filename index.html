@@ -64,8 +64,8 @@ header p{font-size:14px;color:#A0A0A0;font-weight:300}
 .mrt-filter-tag{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500;color:#fff}
 .mrt-filter-tag button{background:none;border:none;color:inherit;cursor:pointer;padding:0;font-size:13px;line-height:1;opacity:0.8}
 /* HORIZONTAL SCROLL CARDS */
-.area-group{max-width:1200px;margin:0 auto;padding:0 1.5rem 1.5rem}
-.area-group-title{display:flex;align-items:center;gap:10px;margin:1.5rem 0 0.75rem;padding-bottom:10px;border-bottom:2px solid var(--border)}
+.area-group{max-width:1200px;margin:0 auto;padding:0 1.5rem 1rem}
+.area-group-title{display:flex;align-items:center;gap:10px;margin:0.75rem 0 0.5rem;padding-bottom:8px;border-bottom:1px solid var(--border)}
 .area-group-title h2{font-family:'Playfair Display',serif;font-size:18px;font-weight:600;color:var(--ink)}
 .area-group-title span{font-size:12px;color:var(--muted);margin-left:auto}
 .cards-scroll{display:flex;gap:16px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:8px}
@@ -309,10 +309,18 @@ window.render=function(){
   // Apply MRT station filter
   if(selectedMrtFilter.length){
     list=list.filter(p=>{
-      const pStations=(p.mrtStations||[]).map(s=>s.id);
-      if(p.metroStation&&!pStations.length)pStations.push(p.metroStation.toLowerCase().replace(/\s+/g,'_'));
-      return selectedMrtFilter.some(fid=>pStations.includes(fid)||
-        (p.metroStation&&p.metroStation.toLowerCase().includes(selectedMrtFilter[0])));
+      // New format: p.mrtStations is array of {id, zh, en, ...}
+      if(Array.isArray(p.mrtStations)&&p.mrtStations.length){
+        return selectedMrtFilter.some(sel=>p.mrtStations.some(s=>s.id===sel.id));
+      }
+      // Legacy format: p.metroStation is a string
+      if(p.metroStation){
+        return selectedMrtFilter.some(sel=>
+          sel.en===p.metroStation||sel.zh===p.metroStation||
+          p.metroStation.toLowerCase().includes(sel.en.toLowerCase())
+        );
+      }
+      return false;
     });
     document.getElementById('resultsInfo').textContent=list.length+' place'+(list.length!==1?'s':'')+' found';
   }
@@ -538,7 +546,7 @@ function renderAreaGroups(list,wrap){
   const html=AREA_ORDER.filter(a=>groups[a.id]&&groups[a.id].length).map(a=>`
     <div class="area-group">
       <div class="area-group-title">
-        <div class="metro-dot" style="background:#5c6bc0"></div>
+        <div class="metro-dot" style="background:var(--red)"></div>
         <h2>${a.en}</h2><span style="font-size:12px;color:var(--muted)">${a.zh}</span>
         <span style="margin-left:auto;font-size:12px;color:var(--muted)">${groups[a.id].length} place${groups[a.id].length!==1?'s':''}</span>
       </div>
@@ -657,7 +665,7 @@ function renderMrtFilterTags(){
   const ph=document.getElementById('mrtFilterPlaceholder');
   const clr=document.getElementById('mrtFilterClear');
   if(!el)return;
-  el.innerHTML=selectedMrtFilter.map((s,i)=>`<span class="mrt-filter-tag" style="background:${s.lineColor||'#999'}">${s.zh}<button onclick="removeMrtFilterTag(${i},event)">×</button></span>`).join('');
+  el.innerHTML=selectedMrtFilter.map((s,i)=>`<span class="mrt-filter-tag" style="background:${s.lineColor||'#999'}">${s.en}<button onclick="removeMrtFilterTag(${i},event)">×</button></span>`).join('');
   if(ph)ph.style.display=selectedMrtFilter.length?'none':'';
   if(clr)clr.style.display=selectedMrtFilter.length?'':'none';
 }
