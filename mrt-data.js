@@ -8,7 +8,7 @@
  */
 // ── MRT STATION DATABASE ──
 // Format: { id, zh, en, line, lineEn, lineColor }
-const MRT_STATIONS = [
+window.MRT_STATIONS = [
   // 紅線 Tamsui-Xinyi Line
   {id:'xinbeitou',zh:'新北投',en:'Xinbeitou',line:'淡水信義線',lineEn:'Tamsui-Xinyi Line',lineColor:'#e53935'},
   {id:'beitou',zh:'北投',en:'Beitou',line:'淡水信義線',lineEn:'Tamsui-Xinyi Line',lineColor:'#e53935'},
@@ -164,7 +164,7 @@ const MRT_STATIONS = [
 ];
 
 // ── AREA DATABASE ──
-const AREAS = [
+window.AREAS = [
   {id:'wanhua_datong', en:'Wanhua & Datong', zh:'萬華・大同', desc:'Longshan Temple, Dihua St, Dadaocheng'},
   {id:'zhongzheng_ximen', en:'Zhongzheng & Ximen', zh:'中正・西門', desc:'CKS Memorial, Ximen, Ximending'},
   {id:'zhongshan_datong', en:'Zhongshan & Datong', zh:'中山・大同', desc:'Zhongshan, Dihua St, Design District'},
@@ -177,4 +177,4 @@ const AREAS = [
   {id:'other', en:'Other Areas', zh:'其他地區', desc:'Outside Taipei Metro Area'},
 ];
 
-if(typeof module !== 'undefined') module.exports = {MRT_STATIONS, AREAS};
+if(typeof module !== 'undefined') module.exports = {MRT_STATIONS: window.MRT_STATIONS, AREAS: window.AREAS};
