@@ -83,6 +83,26 @@ tr:hover td{background:#FAFAF8}
 .tbl-btn:hover{border-color:var(--border-strong);color:var(--ink)}
 .tbl-btn.del:hover{border-color:var(--red);color:var(--red);background:var(--red-light)}
 .cat-pill{display:inline-block;font-size:10px;padding:2px 8px;border-radius:10px;background:var(--surface);color:var(--muted);border:1px solid var(--border);text-transform:capitalize}
+
+/* MRT MULTI-SELECT */
+.mrt-select-wrap{position:relative;width:100%}
+.mrt-selected{min-height:40px;padding:6px 32px 6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--card);cursor:pointer;display:flex;flex-wrap:wrap;gap:4px;align-items:center;transition:border-color 0.15s;position:relative}
+.mrt-selected:focus-within,.mrt-selected:hover{border-color:var(--red)}
+.mrt-placeholder{font-size:13px;color:var(--hint)}
+.mrt-arrow{position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--hint);font-size:12px;pointer-events:none}
+.mrt-tag{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500;color:#fff;cursor:default}
+.mrt-tag button{background:none;border:none;color:inherit;cursor:pointer;padding:0;font-size:13px;line-height:1;opacity:0.7}
+.mrt-tag button:hover{opacity:1}
+.mrt-dropdown{display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:0 8px 24px rgba(0,0,0,0.12);z-index:600;max-height:280px;overflow:hidden;flex-direction:column}
+.mrt-dropdown.open{display:flex}
+.mrt-search{border:none;border-bottom:1px solid var(--border);padding:10px 12px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;width:100%;background:var(--surface)}
+.mrt-options{overflow-y:auto;flex:1}
+.mrt-group-header{padding:6px 12px 2px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#fff;display:flex;align-items:center;gap:6px;position:sticky;top:0;z-index:1}
+.mrt-option{padding:8px 12px 8px 24px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:8px;color:var(--muted);transition:background 0.1s}
+.mrt-option:hover{background:var(--surface)}
+.mrt-option.selected{color:var(--ink);font-weight:500}
+.mrt-option .mrt-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.mrt-option .mrt-check{margin-left:auto;color:var(--red);font-size:14px}
 .admin-chip{font-size:11px;padding:4px 12px;border-radius:20px;border:1px solid var(--border);background:var(--bg);color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.15s;white-space:nowrap}
 .admin-chip:hover{border-color:var(--red);color:var(--red)}
 .admin-chip.active{background:var(--red);color:#fff;border-color:var(--red)}
@@ -277,9 +297,36 @@ tr:hover td{background:#FAFAF8}
 
       <!-- Transport -->
       <div class="section-title">🚇 Transport</div>
-      <div class="field"><label>Metro Station *</label><input type="text" id="fMetroStation" placeholder="e.g. Jiantan Station"/></div>
-      <div class="field"><label>Metro Line</label><input type="text" id="fMetroLine" placeholder="e.g. Red Line"/></div>
-      <div class="field full"><label>Walk from Exit</label><input type="text" id="fWalkTime" placeholder="e.g. 3 min from Exit 1"/></div>
+      <div class="field full">
+        <label>MRT Stations * (can select multiple)</label>
+        <div class="mrt-select-wrap" id="mrtSelectWrap">
+          <div class="mrt-selected" id="mrtSelected" onclick="toggleMrtDropdown()">
+            <span class="mrt-placeholder" id="mrtPlaceholder">Search and select stations...</span>
+            <div class="mrt-tags" id="mrtTags"></div>
+            <span class="mrt-arrow">▾</span>
+          </div>
+          <div class="mrt-dropdown" id="mrtDropdown">
+            <input type="text" class="mrt-search" id="mrtSearch" placeholder="Search station name..." oninput="filterMrtStations(this.value)" onclick="event.stopPropagation()"/>
+            <div class="mrt-options" id="mrtOptions"></div>
+          </div>
+        </div>
+      </div>
+      <div class="field full"><label>Area</label>
+        <select id="fArea">
+          <option value="">— Select Area —</option>
+          <option value="wanhua_datong">Wanhua & Datong 萬華・大同</option>
+          <option value="zhongzheng_ximen">Zhongzheng & Ximen 中正・西門</option>
+          <option value="zhongshan_datong">Zhongshan & Datong 中山・大同</option>
+          <option value="daan_zhongzheng">Da'an & Zhongzheng 大安・中正</option>
+          <option value="xinyi_songshan">Xinyi & Songshan 信義・松山</option>
+          <option value="shilin_beitou">Shilin & Beitou 士林・北投</option>
+          <option value="neihu_nangang">Neihu & Nangang 內湖・南港</option>
+          <option value="new_taipei">New Taipei City 新北市</option>
+          <option value="taoyuan">Taoyuan 桃園</option>
+          <option value="other">Other Areas 其他地區</option>
+        </select>
+      </div>
+      <div class="field full"><label>Walk / Access Note</label><input type="text" id="fWalkTime" placeholder="e.g. 3 min from Exit 1, or take bus 255"/></div>
       <div class="field"><label>Transfer Type</label>
         <select id="fTransferType">
           <option value="">None</option>
@@ -330,6 +377,7 @@ tr:hover td{background:#FAFAF8}
 <div id="toast"></div>
 
 <script src="firebase-config.js"></script>
+<script src="mrt-data.js"></script>
 <script type="module">
 import { initializeApp }                                   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, signOut,
@@ -433,10 +481,12 @@ window.renderTable=function(){
 window.openModal=function(){
   document.getElementById('modalTitle').textContent='Add New Place';
   document.getElementById('editId').value='';
-  ['fName','fNameZh','fMetroStation','fMetroLine','fWalkTime',
+  ['fName','fNameZh','fWalkTime',
    'fTransferType','fTransferTime','fTransferDetail','fDistrict','fPrice',
    'fNearby','fDesc','fEmoji','fMapUrl'].forEach(id=>{ document.getElementById(id).value=''; });
   document.querySelectorAll('#fCategoryGrid input[type=checkbox]').forEach(cb=>cb.checked=false);
+  resetMrtSelect();
+  document.getElementById('fArea').value='';
   currentPhotos=[];currentPhotoMeta=[];currentPublicIds=[];
   resetLinks();
   renderPhotoPreviews();
@@ -454,8 +504,11 @@ window.editPlace=function(id){
   document.querySelectorAll('#fCategoryGrid input[type=checkbox]').forEach(cb=>{
     cb.checked=cats.includes(cb.value);
   });
-  document.getElementById('fMetroStation').value=p.metroStation||'';
-  document.getElementById('fMetroLine').value=p.metroLine||'';
+  // Load MRT stations (new array format)
+  const mrtStations=Array.isArray(p.mrtStations)?p.mrtStations:(p.metroStation?[{id:'',zh:'',en:p.metroStation,line:p.metroLine||'',lineColor:'#999'}]:[]);
+  resetMrtSelect();
+  mrtStations.forEach(s=>addMrtTag(s));
+  document.getElementById('fArea').value=p.area||'';
   document.getElementById('fWalkTime').value=p.walkTime||'';
   document.getElementById('fTransferType').value=p.transferType||'';
   document.getElementById('fTransferTime').value=p.transferTime||'';
@@ -731,14 +784,16 @@ function applyDrag(idx,dx,dy){
 window.savePlace=async function(){
   const name=document.getElementById('fName').value.trim();
   const cats=[...document.querySelectorAll('#fCategoryGrid input[type=checkbox]:checked')].map(cb=>cb.value);
-  const mrt=document.getElementById('fMetroStation').value.trim();
-  if(!name||!cats.length||!mrt){ showToast('Name, at least one Category, and Metro Station are required.','error'); return; }
+  if(!name||!cats.length){ showToast('Name and at least one Category are required.','error'); return; }
   const btn=document.getElementById('saveBtn');
   btn.disabled=true; btn.textContent='Saving…';
   const data={
     name, nameZh:document.getElementById('fNameZh').value.trim(),
-    categories:cats, category:cats[0]||'', metroStation:mrt,
-    metroLine:document.getElementById('fMetroLine').value.trim(),
+    categories:cats, category:cats[0]||'',
+    mrtStations:selectedMrtStations,
+    metroStation:selectedMrtStations.length?selectedMrtStations[0].en:'',
+    metroLine:selectedMrtStations.length?selectedMrtStations[0].lineEn:'',
+    area:document.getElementById('fArea').value,
     walkTime:document.getElementById('fWalkTime').value.trim(),
     transferType:document.getElementById('fTransferType').value,
     transferTime:document.getElementById('fTransferTime').value.trim(),
@@ -838,6 +893,121 @@ function loadLinks(links){
   resetLinks();
   (links||[]).forEach(l=>addLinkRow(l.name,l.url));
 }
+
+// ── MRT MULTI-SELECT ──
+let selectedMrtStations=[];
+
+function initMrtOptions(){
+  const wrap=document.getElementById('mrtOptions');
+  if(!wrap||!window.MRT_STATIONS)return;
+  const groups={};
+  MRT_STATIONS.forEach(s=>{
+    if(!groups[s.lineEn])groups[s.lineEn]={color:s.lineColor,stations:[]};
+    groups[s.lineEn].stations.push(s);
+  });
+  wrap.innerHTML=Object.entries(groups).map(([line,g])=>`
+    <div class="mrt-group-header" style="background:${g.color}">${line}</div>
+    ${g.stations.map(s=>`
+      <div class="mrt-option" id="mrt-opt-${s.id}" onclick="toggleMrtStation(${JSON.stringify(s).replace(/"/g,'&quot;')})">
+        <span class="mrt-dot" style="background:${s.lineColor}"></span>
+        <span>${s.zh} ${s.en}</span>
+        <span class="mrt-check" style="display:none">✓</span>
+      </div>`).join('')}
+  `).join('');
+}
+
+window.toggleMrtDropdown=function(){
+  const dd=document.getElementById('mrtDropdown');
+  if(!dd)return;
+  const isOpen=dd.classList.contains('open');
+  if(!isOpen){
+    dd.classList.add('open');
+    document.getElementById('mrtSearch').focus();
+    if(!document.getElementById('mrtOptions').children.length)initMrtOptions();
+    setTimeout(()=>document.addEventListener('click',closeMrtOnOutside),0);
+  } else {
+    dd.classList.remove('open');
+  }
+};
+
+function closeMrtOnOutside(e){
+  const wrap=document.getElementById('mrtSelectWrap');
+  if(wrap&&!wrap.contains(e.target)){
+    document.getElementById('mrtDropdown').classList.remove('open');
+    document.removeEventListener('click',closeMrtOnOutside);
+  }
+}
+
+window.filterMrtStations=function(q){
+  const opts=document.querySelectorAll('.mrt-option');
+  const headers=document.querySelectorAll('.mrt-group-header');
+  const ql=q.toLowerCase();
+  const visibleGroups=new Set();
+  opts.forEach(opt=>{
+    const match=!q||opt.textContent.toLowerCase().includes(ql);
+    opt.style.display=match?'':'none';
+    if(match){
+      let prev=opt.previousElementSibling;
+      while(prev&&!prev.classList.contains('mrt-group-header'))prev=prev.previousElementSibling;
+      if(prev)visibleGroups.add(prev);
+    }
+  });
+  headers.forEach(h=>h.style.display=(!q||visibleGroups.has(h))?'':'none');
+};
+
+function addMrtTag(s){
+  if(selectedMrtStations.find(x=>x.id===s.id))return;
+  selectedMrtStations.push(s);
+  renderMrtTags();
+  const opt=document.getElementById('mrt-opt-'+s.id);
+  if(opt){opt.classList.add('selected');const chk=opt.querySelector('.mrt-check');if(chk)chk.style.display='';}
+}
+
+window.toggleMrtStation=function(s){
+  const idx=selectedMrtStations.findIndex(x=>x.id===s.id);
+  if(idx>=0){
+    selectedMrtStations.splice(idx,1);
+    const opt=document.getElementById('mrt-opt-'+s.id);
+    if(opt){opt.classList.remove('selected');const chk=opt.querySelector('.mrt-check');if(chk)chk.style.display='none';}
+  } else {
+    addMrtTag(s);
+  }
+  renderMrtTags();
+};
+
+function renderMrtTags(){
+  const tagsEl=document.getElementById('mrtTags');
+  const ph=document.getElementById('mrtPlaceholder');
+  if(!tagsEl)return;
+  tagsEl.innerHTML=selectedMrtStations.map((s,i)=>`
+    <span class="mrt-tag" style="background:${s.lineColor||'#999'}">
+      ${s.zh} ${s.en}
+      <button onclick="removeMrtTag(${i},event)">×</button>
+    </span>`).join('');
+  if(ph)ph.style.display=selectedMrtStations.length?'none':'';
+}
+
+window.removeMrtTag=function(i,e){
+  e.stopPropagation();
+  const s=selectedMrtStations[i];
+  selectedMrtStations.splice(i,1);
+  renderMrtTags();
+  const opt=document.getElementById('mrt-opt-'+(s&&s.id));
+  if(opt){opt.classList.remove('selected');const chk=opt.querySelector('.mrt-check');if(chk)chk.style.display='none';}
+};
+
+function resetMrtSelect(){
+  selectedMrtStations=[];
+  renderMrtTags();
+  document.querySelectorAll('#mrtOptions .mrt-option').forEach(o=>{
+    o.classList.remove('selected');const c=o.querySelector('.mrt-check');if(c)c.style.display='none';
+  });
+  const dd=document.getElementById('mrtDropdown');
+  if(dd)dd.classList.remove('open');
+  const search=document.getElementById('mrtSearch');
+  if(search){search.value='';filterMrtStations('');}
+}
+
 let cleanupItems=[];
 onValue(ref(db,'pending_cleanup'),snap=>{
   const data=snap.val();
@@ -888,5 +1058,11 @@ function showToast(msg,type=''){
   clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.className='',3500);
 }
 </script>
+<div style="text-align:center;padding:1rem;font-size:11px;color:var(--hint);border-top:1px solid var(--border);line-height:1.6;margin-top:2rem">
+    MRT station data sourced from public information by
+    <a href="https://www.metro.taipei" target="_blank" rel="noopener" style="color:var(--hint)">Taipei Rapid Transit Corporation (TRTC)</a> and
+    <a href="https://www.tymetro.com.tw" target="_blank" rel="noopener" style="color:var(--hint)">Taoyuan Metro Corporation (TYMC)</a>.
+    All station names and route designations are trademarks of their respective operators.
+  </div>
 </body>
 </html>

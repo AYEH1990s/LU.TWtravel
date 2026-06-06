@@ -53,6 +53,26 @@ header p{font-size:14px;color:#A0A0A0;font-weight:300}
 .sort-btn.active{background:var(--ink);color:#fff;border-color:var(--ink);font-weight:500}
 .sort-btn svg{width:13px;height:13px}
 .results-info{font-size:12px;color:var(--hint);white-space:nowrap}
+/* MRT FILTER */
+.mrt-filter-wrap{max-width:1200px;margin:0 auto 0.75rem;padding:0 1.5rem;position:relative}
+.mrt-filter-inner{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.mrt-filter-label{font-size:11px;color:var(--hint);font-weight:500;text-transform:uppercase;letter-spacing:1px;white-space:nowrap}
+.mrt-filter-select{display:flex;align-items:center;gap:6px;flex-wrap:wrap;flex:1;min-width:160px;max-width:500px;padding:6px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--card);cursor:pointer;font-size:13px;color:var(--hint);transition:border-color 0.15s}
+.mrt-filter-select:hover{border-color:var(--red)}
+.mrt-filter-dropdown{display:none;position:absolute;top:calc(100% + 4px);left:1.5rem;right:1.5rem;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:0 8px 24px rgba(0,0,0,0.12);z-index:99;max-height:320px;overflow:hidden;flex-direction:column}
+.mrt-filter-dropdown.open{display:flex}
+.mrt-filter-tag{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500;color:#fff}
+.mrt-filter-tag button{background:none;border:none;color:inherit;cursor:pointer;padding:0;font-size:13px;line-height:1;opacity:0.8}
+/* HORIZONTAL SCROLL CARDS */
+.area-group{max-width:1200px;margin:0 auto;padding:0 1.5rem 1.5rem}
+.area-group-title{display:flex;align-items:center;gap:10px;margin:1.5rem 0 0.75rem;padding-bottom:10px;border-bottom:2px solid var(--border)}
+.area-group-title h2{font-family:'Playfair Display',serif;font-size:18px;font-weight:600;color:var(--ink)}
+.area-group-title span{font-size:12px;color:var(--muted);margin-left:auto}
+.cards-scroll{display:flex;gap:16px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:8px}
+.cards-scroll::-webkit-scrollbar{display:none}
+.cards-scroll .card{flex:0 0 300px;min-width:0}
+@media(max-width:640px){.cards-scroll .card{flex:0 0 85vw}}
+@media(min-width:641px) and (max-width:1024px){.cards-scroll .card{flex:0 0 45vw}}
 
 /* CONTENT */
 .content-wrap{max-width:1200px;margin:0 auto;padding:0 1.5rem 3rem}
@@ -203,20 +223,37 @@ footer{text-align:center;padding:2rem 1rem;font-size:12px;color:var(--hint);bord
 <div class="sort-bar">
   <span class="sort-label">Group by</span>
   <div class="sort-btns">
-    <button class="sort-btn" id="sort-metro" onclick="setSort('metro')">
-      <svg fill="none" viewBox="0 0 24 24" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10v4M10 10v4M14 10v4M18 10v4"/></svg>Metro Station
+    <button class="sort-btn active" id="sort-area" onclick="setSort('area')">
+      <svg fill="none" viewBox="0 0 24 24" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Area
     </button>
-    <button class="sort-btn active" id="sort-name" onclick="setSort('name')">
+    <button class="sort-btn" id="sort-name" onclick="setSort('name')">
       <svg fill="none" viewBox="0 0 24 24" stroke-width="2"><path d="M3 6h18M3 12h12M3 18h8"/></svg>Name (A–Z)
     </button>
-    <button class="sort-btn" id="sort-district" onclick="setSort('district')">
-      <svg fill="none" viewBox="0 0 24 24" stroke-width="2"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>District
+    <button class="sort-btn" id="sort-line" onclick="setSort('line')">
+      <svg fill="none" viewBox="0 0 24 24" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10v4M10 10v4M14 10v4M18 10v4"/></svg>MRT Line
     </button>
   </div>
   <span class="results-info" id="resultsInfo"></span>
 </div>
 
-<div class="content-wrap" id="mainContent"></div>
+<!-- MRT Station Filter -->
+<div class="mrt-filter-wrap" id="mrtFilterWrap">
+  <div class="mrt-filter-inner">
+    <span class="mrt-filter-label">🚇 MRT Station</span>
+    <div class="mrt-filter-select" id="mrtFilterSelect" onclick="toggleMrtFilter()">
+      <span id="mrtFilterPlaceholder">All stations</span>
+      <span id="mrtFilterTags"></span>
+      <span>▾</span>
+    </div>
+    <button id="mrtFilterClear" onclick="clearMrtFilter()" style="display:none;font-size:11px;padding:4px 10px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif">Clear</button>
+  </div>
+  <div class="mrt-filter-dropdown" id="mrtFilterDropdown">
+    <input type="text" placeholder="Search station..." id="mrtFilterSearch" oninput="filterMrtFilterOptions(this.value)" onclick="event.stopPropagation()" style="border:none;border-bottom:1px solid var(--border);padding:10px 12px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;width:100%;background:var(--surface)"/>
+    <div id="mrtFilterOptions" style="overflow-y:auto;max-height:240px"></div>
+  </div>
+</div>
+
+<div id="mainContent"></div>
 
 <!-- LIGHTBOX -->
 <div id="lightbox" onclick="lbBackdropClick(event)">
@@ -227,16 +264,26 @@ footer{text-align:center;padding:2rem 1rem;font-size:12px;color:var(--hint);bord
   <div id="lightbox-counter"></div>
 </div>
 
-<footer>© Taiwan Travel Guide · <a href="admin.html" style="color:var(--hint)">Admin</a></footer>
+<footer>
+  © Taiwan Travel Guide · <a href="admin.html" style="color:var(--hint)">Admin</a>
+  <div style="margin-top:6px;font-size:11px;color:var(--hint);line-height:1.6">
+    MRT station data sourced from public information by
+    <a href="https://www.metro.taipei" target="_blank" rel="noopener" style="color:var(--hint)">Taipei Rapid Transit Corporation (TRTC)</a> and
+    <a href="https://www.tymetro.com.tw" target="_blank" rel="noopener" style="color:var(--hint)">Taoyuan Metro Corporation (TYMC)</a>.
+    All station names and route designations are trademarks of their respective operators.
+  </div>
+</footer>
 
 <script src="firebase-config.js"></script>
+<script src="mrt-data.js"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 const app=initializeApp(FIREBASE_CONFIG);
 const db=getDatabase(app);
-let allPlaces=[],currentFilter='all',currentSort='name';
+let allPlaces=[],currentFilter='all',currentSort='area';
+let selectedMrtFilter=[];
 let lbPhotos=[],lbIndex=0;
 
 const LINE_COLORS={'red':'line-red','green':'line-green','orange':'line-orange','blue':'line-blue','brown':'line-brown','yellow':'line-yellow','purple':'line-purple','pink':'line-pink'};
@@ -259,9 +306,19 @@ window.render=function(){
   document.getElementById('resultsInfo').textContent=list.length+' place'+(list.length!==1?'s':'')+' found';
   const wrap=document.getElementById('mainContent');
   if(!list.length){wrap.innerHTML='<div class="cards-grid"><div class="state-box"><svg fill="none" viewBox="0 0 24 24" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><p>No places found.</p></div></div>';return;}
-  if(currentSort==='metro') renderGrouped(list,'metroStation',wrap);
-  else if(currentSort==='district') renderGrouped(list,'district',wrap);
-  else{list.sort((a,b)=>a.name.localeCompare(b.name));wrap.innerHTML='<div class="cards-grid">'+list.map(cardHTML).join('')+'</div>';}
+  // Apply MRT station filter
+  if(selectedMrtFilter.length){
+    list=list.filter(p=>{
+      const pStations=(p.mrtStations||[]).map(s=>s.id);
+      if(p.metroStation&&!pStations.length)pStations.push(p.metroStation.toLowerCase().replace(/\s+/g,'_'));
+      return selectedMrtFilter.some(fid=>pStations.includes(fid)||
+        (p.metroStation&&p.metroStation.toLowerCase().includes(selectedMrtFilter[0])));
+    });
+    document.getElementById('resultsInfo').textContent=list.length+' place'+(list.length!==1?'s':'')+' found';
+  }
+  if(currentSort==='area') renderAreaGroups(list,wrap);
+  else if(currentSort==='line') renderLineGroups(list,wrap);
+  else{list.sort((a,b)=>a.name.localeCompare(b.name));wrap.innerHTML='<div class="content-wrap"><div class="cards-grid">'+list.map(cardHTML).join('')+'</div></div>';}
   initCarousels();
 };
 
@@ -454,6 +511,150 @@ document.addEventListener('keydown',e=>{
   if(e.key==='ArrowLeft')lbPrev();
   if(e.key==='ArrowRight')lbNext();
 });
+
+
+// ── AREA DEFINITIONS ──
+const AREA_ORDER=[
+  {id:'wanhua_datong',en:'Wanhua & Datong',zh:'萬華・大同'},
+  {id:'zhongzheng_ximen',en:'Zhongzheng & Ximen',zh:'中正・西門'},
+  {id:'zhongshan_datong',en:'Zhongshan & Datong',zh:'中山・大同'},
+  {id:'daan_zhongzheng',en:"Da'an & Zhongzheng",zh:'大安・中正'},
+  {id:'xinyi_songshan',en:'Xinyi & Songshan',zh:'信義・松山'},
+  {id:'shilin_beitou',en:'Shilin & Beitou',zh:'士林・北投'},
+  {id:'neihu_nangang',en:'Neihu & Nangang',zh:'內湖・南港'},
+  {id:'new_taipei',en:'New Taipei City',zh:'新北市'},
+  {id:'taoyuan',en:'Taoyuan',zh:'桃園'},
+  {id:'other',en:'Other Areas',zh:'其他地區'},
+];
+
+function renderAreaGroups(list,wrap){
+  const groups={};
+  AREA_ORDER.forEach(a=>{groups[a.id]=[];});
+  list.forEach(p=>{
+    const aid=p.area||'other';
+    if(!groups[aid])groups[aid]=[];
+    groups[aid].push(p);
+  });
+  const html=AREA_ORDER.filter(a=>groups[a.id]&&groups[a.id].length).map(a=>`
+    <div class="area-group">
+      <div class="area-group-title">
+        <div class="metro-dot" style="background:var(--red)"></div>
+        <h2>${a.en}</h2><span style="font-size:12px;color:var(--muted)">${a.zh}</span>
+        <span style="margin-left:auto;font-size:12px;color:var(--muted)">${groups[a.id].length} place${groups[a.id].length!==1?'s':''}</span>
+      </div>
+      <div class="cards-scroll">${groups[a.id].map(cardHTML).join('')}</div>
+    </div>`).join('');
+  wrap.innerHTML=html||'<div class="content-wrap"><div class="state-box"><p>No places found.</p></div></div>';
+  initCarousels();
+}
+
+function renderLineGroups(list,wrap){
+  const lineOrder=['Tamsui-Xinyi Line','Songshan-Xindian Line','Zhonghe-Xinlu Line','Bannan Line','Circular Line','Wenhu Line','Taoyuan Airport MRT'];
+  const lineColors={'Tamsui-Xinyi Line':'#e53935','Songshan-Xindian Line':'#43a047','Zhonghe-Xinlu Line':'#fb8c00','Bannan Line':'#1e88e5','Circular Line':'#fdd835','Wenhu Line':'#795548','Taoyuan Airport MRT':'#8e24aa'};
+  const groups={};
+  list.forEach(p=>{
+    const stations=p.mrtStations&&p.mrtStations.length?p.mrtStations:[{lineEn:p.metroLine||'Other',lineColor:'#999'}];
+    const linesAdded=new Set();
+    stations.forEach(s=>{
+      const line=s.lineEn||'Other';
+      if(!linesAdded.has(line)){linesAdded.add(line);if(!groups[line])groups[line]=[];groups[line].push(p);}
+    });
+  });
+  const keys=[...lineOrder.filter(l=>groups[l]),...Object.keys(groups).filter(l=>!lineOrder.includes(l)&&groups[l])];
+  const html=keys.map(line=>`
+    <div class="area-group">
+      <div class="area-group-title">
+        <div class="metro-dot" style="background:${lineColors[line]||'#999'}"></div>
+        <h2>${line}</h2>
+        <span style="margin-left:auto;font-size:12px;color:var(--muted)">${groups[line].length} place${groups[line].length!==1?'s':''}</span>
+      </div>
+      <div class="cards-scroll">${groups[line].map(cardHTML).join('')}</div>
+    </div>`).join('');
+  wrap.innerHTML=html||'<div class="content-wrap"><div class="state-box"><p>No places found.</p></div></div>';
+  initCarousels();
+}
+
+// ── MRT FILTER ──
+let mrtFilterInitialised=false;
+window.toggleMrtFilter=function(){
+  const dd=document.getElementById('mrtFilterDropdown');
+  if(!dd)return;
+  const open=dd.classList.toggle('open');
+  if(open){
+    if(!mrtFilterInitialised){initMrtFilterOptions();mrtFilterInitialised=true;}
+    document.getElementById('mrtFilterSearch').focus();
+    setTimeout(()=>document.addEventListener('click',closeMrtFilter),0);
+  }
+};
+function closeMrtFilter(e){
+  const wrap=document.getElementById('mrtFilterWrap');
+  if(wrap&&!wrap.contains(e.target)){
+    document.getElementById('mrtFilterDropdown').classList.remove('open');
+    document.removeEventListener('click',closeMrtFilter);
+  }
+}
+function initMrtFilterOptions(){
+  const wrap=document.getElementById('mrtFilterOptions');
+  if(!wrap||!window.MRT_STATIONS)return;
+  const groups={};
+  MRT_STATIONS.forEach(s=>{
+    if(!groups[s.lineEn])groups[s.lineEn]={color:s.lineColor,stations:[]};
+    groups[s.lineEn].stations.push(s);
+  });
+  wrap.innerHTML=Object.entries(groups).map(([line,g])=>`
+    <div style="padding:6px 12px 2px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#fff;background:${g.color};position:sticky;top:0">${line}</div>
+    ${g.stations.map(s=>`
+      <div class="mrt-option" id="mf-opt-${s.id}" onclick="toggleMrtFilter_station(${JSON.stringify(s).replace(/"/g,'&quot;')})">
+        <span class="mrt-dot" style="background:${s.lineColor}"></span>
+        <span>${s.zh} ${s.en}</span>
+        <span class="mrt-check" style="display:none">✓</span>
+      </div>`).join('')}
+  `).join('');
+}
+window.filterMrtFilterOptions=function(q){
+  document.querySelectorAll('#mrtFilterOptions .mrt-option').forEach(o=>{
+    o.style.display=!q||o.textContent.toLowerCase().includes(q.toLowerCase())?'':'none';
+  });
+};
+window.toggleMrtFilter_station=function(s){
+  const idx=selectedMrtFilter.findIndex(x=>x.id===s.id);
+  if(idx>=0){
+    selectedMrtFilter.splice(idx,1);
+    const opt=document.getElementById('mf-opt-'+s.id);
+    if(opt){opt.classList.remove('selected');const c=opt.querySelector('.mrt-check');if(c)c.style.display='none';}
+  } else {
+    selectedMrtFilter.push(s);
+    const opt=document.getElementById('mf-opt-'+s.id);
+    if(opt){opt.classList.add('selected');const c=opt.querySelector('.mrt-check');if(c)c.style.display='';}
+  }
+  renderMrtFilterTags();
+  render();
+};
+function renderMrtFilterTags(){
+  const el=document.getElementById('mrtFilterTags');
+  const ph=document.getElementById('mrtFilterPlaceholder');
+  const clr=document.getElementById('mrtFilterClear');
+  if(!el)return;
+  el.innerHTML=selectedMrtFilter.map((s,i)=>`<span class="mrt-filter-tag" style="background:${s.lineColor||'#999'}">${s.zh}<button onclick="removeMrtFilterTag(${i},event)">×</button></span>`).join('');
+  if(ph)ph.style.display=selectedMrtFilter.length?'none':'';
+  if(clr)clr.style.display=selectedMrtFilter.length?'':'none';
+}
+window.removeMrtFilterTag=function(i,e){
+  e.stopPropagation();
+  const s=selectedMrtFilter[i];
+  selectedMrtFilter.splice(i,1);
+  renderMrtFilterTags();
+  const opt=document.getElementById('mf-opt-'+(s&&s.id));
+  if(opt){opt.classList.remove('selected');const c=opt.querySelector('.mrt-check');if(c)c.style.display='none';}
+  render();
+};
+window.clearMrtFilter=function(){
+  selectedMrtFilter=[];
+  document.querySelectorAll('#mrtFilterOptions .mrt-option').forEach(o=>{
+    o.classList.remove('selected');const c=o.querySelector('.mrt-check');if(c)c.style.display='none';
+  });
+  renderMrtFilterTags();render();
+};
 
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function escNl(s){return esc(s).replace(/\n/g,'<br>');}
