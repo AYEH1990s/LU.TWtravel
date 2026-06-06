@@ -93,7 +93,7 @@ tr:hover td{background:#FAFAF8}
 .mrt-tag{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500;color:#fff;cursor:default}
 .mrt-tag button{background:none;border:none;color:inherit;cursor:pointer;padding:0;font-size:13px;line-height:1;opacity:0.7}
 .mrt-tag button:hover{opacity:1}
-.mrt-dropdown{display:none;position:fixed;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:0 8px 24px rgba(0,0,0,0.15);z-index:700;max-height:300px;overflow:hidden;flex-direction:column;width:auto}
+.mrt-dropdown{display:none;position:fixed;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:0 8px 24px rgba(0,0,0,0.15);z-index:700;max-height:300px;overflow:hidden;flex-direction:column}
 .mrt-dropdown.open{display:flex}
 .mrt-search{border:none;border-bottom:1px solid var(--border);padding:10px 12px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;width:100%;background:var(--surface)}
 .mrt-options{overflow-y:auto;flex:1}
@@ -928,13 +928,12 @@ function initMrtOptions(){
 
 window.toggleMrtDropdown=function(){
   const dd=document.getElementById('mrtDropdown');
-  const selected=document.getElementById('mrtSelected');
-  if(!dd||!selected)return;
+  const trigger=document.getElementById('mrtSelected');
+  if(!dd||!trigger)return;
   const isOpen=dd.classList.contains('open');
   if(!isOpen){
-    // Position using fixed coords from the trigger element
-    const rect=selected.getBoundingClientRect();
-    dd.style.top=(rect.bottom+4)+'px';
+    const rect=trigger.getBoundingClientRect();
+    dd.style.top=(rect.bottom+2)+'px';
     dd.style.left=rect.left+'px';
     dd.style.width=rect.width+'px';
     dd.classList.add('open');

@@ -59,7 +59,7 @@ header p{font-size:14px;color:#A0A0A0;font-weight:300}
 .mrt-filter-label{font-size:11px;color:var(--hint);font-weight:500;text-transform:uppercase;letter-spacing:1px;white-space:nowrap}
 .mrt-filter-select{display:flex;align-items:center;gap:6px;flex-wrap:wrap;flex:1;min-width:160px;max-width:500px;padding:6px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--card);cursor:pointer;font-size:13px;color:var(--hint);transition:border-color 0.15s}
 .mrt-filter-select:hover{border-color:var(--red)}
-.mrt-filter-dropdown{display:none;position:fixed;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:0 8px 24px rgba(0,0,0,0.12);z-index:99;max-height:320px;overflow:hidden;flex-direction:column;width:auto}
+.mrt-filter-dropdown{display:none;position:fixed;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:0 8px 24px rgba(0,0,0,0.12);z-index:200;max-height:320px;overflow:hidden;flex-direction:column}
 .mrt-filter-dropdown.open{display:flex}
 .mrt-filter-tag{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500;color:#fff}
 .mrt-filter-tag button{background:none;border:none;color:inherit;cursor:pointer;padding:0;font-size:13px;line-height:1;opacity:0.8}
@@ -576,17 +576,15 @@ function renderLineGroups(list,wrap){
 
 // ── MRT FILTER ──
 let mrtFilterInitialised=false;
+// Reset when data loads so filter rebuilds with actual places
+function resetMrtFilterInit(){mrtFilterInitialised=false;}
 window.toggleMrtFilter=function(){
   const dd=document.getElementById('mrtFilterDropdown');
-  const trigger=document.getElementById('mrtFilterSelect');
-  if(!dd||!trigger)return;
+  if(!dd)return;
   const open=dd.classList.toggle('open');
   if(open){
-    const rect=trigger.getBoundingClientRect();
-    dd.style.top=(rect.bottom+4)+'px';
-    dd.style.left=rect.left+'px';
-    dd.style.width=Math.max(300,rect.width)+'px';
-    if(!mrtFilterInitialised){initMrtFilterOptions();mrtFilterInitialised=true;}
+    initMrtFilterOptions();
+    mrtFilterInitialised=true;
     document.getElementById('mrtFilterSearch').focus();
     setTimeout(()=>document.addEventListener('click',closeMrtFilter),0);
   }
@@ -601,21 +599,35 @@ function closeMrtFilter(e){
 function initMrtFilterOptions(){
   const wrap=document.getElementById('mrtFilterOptions');
   if(!wrap)return;
-  if(!window.MRT_STATIONS||!window.MRT_STATIONS.length){
-    wrap.innerHTML='<div style="padding:12px;font-size:13px;color:var(--hint)">Loading stations...</div>';
-    setTimeout(initMrtFilterOptions,300);
+  // Build list from actual places data only
+  const usedIds=new Set();
+  const usedStations=[];
+  allPlaces.forEach(p=>{
+    if(Array.isArray(p.mrtStations)&&p.mrtStations.length){
+      p.mrtStations.forEach(s=>{
+        if(s&&s.id&&!usedIds.has(s.id)){usedIds.add(s.id);usedStations.push(s);}
+      });
+    } else if(p.metroStation&&!usedIds.has(p.metroStation)){
+      usedIds.add(p.metroStation);
+      const found=window.MRT_STATIONS&&window.MRT_STATIONS.find(s=>s.en===p.metroStation);
+      usedStations.push(found||{id:p.metroStation,zh:p.metroStation,en:p.metroStation,lineEn:p.metroLine||'Other',lineColor:p.metroLineColor||'#999'});
+    }
+  });
+  if(!usedStations.length){
+    wrap.innerHTML='<div style="padding:12px;font-size:13px;color:var(--hint)">No stations in current places yet.</div>';
     return;
   }
   const groups={};
-  window.MRT_STATIONS.forEach(s=>{
-    if(!groups[s.lineEn])groups[s.lineEn]={color:s.lineColor,stations:[]};
-    groups[s.lineEn].stations.push(s);
+  usedStations.forEach(s=>{
+    const line=s.lineEn||'Other';
+    if(!groups[line])groups[line]={color:s.lineColor||'#999',stations:[]};
+    groups[line].stations.push(s);
   });
   wrap.innerHTML=Object.entries(groups).map(([line,g])=>`
     <div style="padding:6px 12px 2px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#fff;background:${g.color};position:sticky;top:0">${line}</div>
     ${g.stations.map(s=>`
       <div class="mrt-option" id="mf-opt-${s.id}" onclick="toggleMrtFilter_station(${JSON.stringify(s).replace(/"/g,'&quot;')})">
-        <span class="mrt-dot" style="background:${s.lineColor}"></span>
+        <span class="mrt-dot" style="background:${s.lineColor||'#999'}"></span>
         <span>${s.zh} ${s.en}</span>
         <span class="mrt-check" style="display:none">✓</span>
       </div>`).join('')}
@@ -693,6 +705,7 @@ window.positionSlideImg=function(img,zoom,ox,oy){
 onValue(ref(db,'places'),snap=>{
   const data=snap.val();
   allPlaces=data?Object.entries(data).map(([id,v])=>({id,...v})):[];
+  resetMrtFilterInit();
   render();
 },err=>{
   document.getElementById('mainContent').innerHTML=`<div class="state-box"><p style="color:var(--red)">Unable to load data.<br><small>${err.message}</small></p></div>`;
