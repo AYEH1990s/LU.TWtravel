@@ -93,7 +93,7 @@ tr:hover td{background:#FAFAF8}
 .mrt-tag{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500;color:#fff;cursor:default}
 .mrt-tag button{background:none;border:none;color:inherit;cursor:pointer;padding:0;font-size:13px;line-height:1;opacity:0.7}
 .mrt-tag button:hover{opacity:1}
-.mrt-dropdown{display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:0 8px 24px rgba(0,0,0,0.12);z-index:600;max-height:280px;overflow:hidden;flex-direction:column}
+.mrt-dropdown{display:none;position:fixed;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:0 8px 24px rgba(0,0,0,0.15);z-index:700;max-height:300px;overflow:hidden;flex-direction:column;width:auto}
 .mrt-dropdown.open{display:flex}
 .mrt-search{border:none;border-bottom:1px solid var(--border);padding:10px 12px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;width:100%;background:var(--surface)}
 .mrt-options{overflow-y:auto;flex:1}
@@ -117,12 +117,12 @@ tr:hover td{background:#FAFAF8}
 /* MODAL */
 #modalBackdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:flex-start;justify-content:center;padding:1.5rem 1rem;overflow-y:auto}
 #modalBackdrop.open{display:flex}
-.modal{background:var(--card);border-radius:16px;width:100%;max-width:640px;box-shadow:0 24px 80px rgba(0,0,0,0.3);overflow:hidden;margin:auto}
+.modal{background:var(--card);border-radius:16px;width:100%;max-width:640px;box-shadow:0 24px 80px rgba(0,0,0,0.3);overflow:visible;margin:auto}
 .modal-head{padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
 .modal-head h3{font-family:'Playfair Display',serif;font-size:20px}
 .close-btn{width:32px;height:32px;border-radius:50%;border:1px solid var(--border);background:var(--bg);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .close-btn svg{width:16px;height:16px;stroke:var(--muted)}
-.modal-body{padding:1.5rem;display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
+.modal-body{padding:1.5rem;display:grid;grid-template-columns:1fr 1fr;gap:0 16px;overflow:visible}
 .modal-body .field.full{grid-column:1/-1}
 .section-title{grid-column:1/-1;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:1px;color:var(--hint);margin:8px 0 4px;padding-top:12px;border-top:1px solid var(--border)}
 .modal-footer{padding:1rem 1.5rem;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end}
@@ -899,9 +899,14 @@ let selectedMrtStations=[];
 
 function initMrtOptions(){
   const wrap=document.getElementById('mrtOptions');
-  if(!wrap||!window.MRT_STATIONS)return;
+  if(!wrap)return;
+  if(!window.MRT_STATIONS||!window.MRT_STATIONS.length){
+    wrap.innerHTML='<div style="padding:12px;font-size:13px;color:var(--hint)">Loading stations...</div>';
+    setTimeout(initMrtOptions,300);
+    return;
+  }
   const groups={};
-  MRT_STATIONS.forEach(s=>{
+  window.MRT_STATIONS.forEach(s=>{
     if(!groups[s.lineEn])groups[s.lineEn]={color:s.lineColor,stations:[]};
     groups[s.lineEn].stations.push(s);
   });
@@ -914,19 +919,32 @@ function initMrtOptions(){
         <span class="mrt-check" style="display:none">✓</span>
       </div>`).join('')}
   `).join('');
+  // Re-apply selected state
+  selectedMrtStations.forEach(s=>{
+    const opt=document.getElementById('mrt-opt-'+s.id);
+    if(opt){opt.classList.add('selected');const c=opt.querySelector('.mrt-check');if(c)c.style.display='';}
+  });
 }
 
 window.toggleMrtDropdown=function(){
   const dd=document.getElementById('mrtDropdown');
-  if(!dd)return;
+  const selected=document.getElementById('mrtSelected');
+  if(!dd||!selected)return;
   const isOpen=dd.classList.contains('open');
   if(!isOpen){
+    // Position using fixed coords from the trigger element
+    const rect=selected.getBoundingClientRect();
+    dd.style.top=(rect.bottom+4)+'px';
+    dd.style.left=rect.left+'px';
+    dd.style.width=rect.width+'px';
     dd.classList.add('open');
-    document.getElementById('mrtSearch').focus();
-    if(!document.getElementById('mrtOptions').children.length)initMrtOptions();
+    initMrtOptions();
+    const search=document.getElementById('mrtSearch');
+    if(search){search.value='';search.focus();filterMrtStations('');}
     setTimeout(()=>document.addEventListener('click',closeMrtOnOutside),0);
   } else {
     dd.classList.remove('open');
+    document.removeEventListener('click',closeMrtOnOutside);
   }
 };
 
